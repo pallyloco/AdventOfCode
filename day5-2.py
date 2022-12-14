@@ -21,11 +21,7 @@ def main():
         for line in file:
             cmd = re.match(r'move (\d+) from (\d+) to (\d+)',line)
             if cmd:
-                line = line.strip()
-                (amt,from_stack,to_stack) = cmd.groups()
-                amt = int(amt)
-                from_stack = int(from_stack)
-                to_stack = int(to_stack)
+                (amt,from_stack,to_stack) = map(int, cmd.groups())
                 stacks[to_stack-1].extendleft(reversed(list(stacks[from_stack-1])[0:amt]))
                 for _ in range(amt):
                     stacks[from_stack-1].popleft()

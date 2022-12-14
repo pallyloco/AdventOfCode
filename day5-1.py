@@ -19,17 +19,15 @@ def main():
 
         # process the commands
         for line in file:
-            cmd = re.match(r'move (\d+) from (\d+) to (\d+)',line)
-            if cmd:
-                line = line.strip()
+            if cmd := re.match(r'move (\d+) from (\d+) to (\d+)',line):
                 (amt,from_stack,to_stack) = cmd.groups()
                 for _ in range(int(amt)):
                     stacks[int(to_stack)-1].appendleft(stacks[int(from_stack)-1].popleft())
 
         # print results
-        for i in range(len(stacks)):
-            if len(stacks[i]) > 0:
-                print(stacks[i][0],end="")
+        for stack in stacks:
+            if stack:
+                print(stack[0],end="")
         print()
 #        print (f"Score: {score}")
 

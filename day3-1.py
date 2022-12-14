@@ -6,20 +6,22 @@ def main():
         for line in file:
             line = line.strip()
             length = len(line)//2
-            first = (line[0:length])
-            last = (line[length:])
+            first = set(line[0:length])
+            last =  set(line[length:])
             print (f"\nfirst: {first} last: {last}")
 
-            for c in first :
-                if c in last:
-                    print (f"found duplicate {c}")
-                    if c == c.upper():
-                        score = score + ord(c) - ord("A") + 27
-                        print (f"add score  {ord(c) - ord('A') + 27}")
-                    else:
-                        score = score + ord(c) - ord("a") + 1
-                        print (f"new score is {ord(c) - ord('a') + 1}")
-                    break
+            result = first.intersection(last)
+
+            if result:
+                print(result)
+                c, *_ = result
+                print (f"found duplicate {c}")
+                if c.isupper():
+                    score = score + ord(c) - ord("A") + 27
+                    print (f"add score  {ord(c) - ord('A') + 27}")
+                else:
+                    score = score + ord(c) - ord("a") + 1
+                    print (f"new score is {ord(c) - ord('a') + 1}")
 
         print (f"score is {score}")
 

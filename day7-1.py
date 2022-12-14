@@ -23,6 +23,7 @@ def main():
     print_dirs("",tree)
  
     total = 0
+    # sum(size for size in dir_sizes.values() if size <= 10000)
     for dir,size in dir_sizes.items():
         size = int(size)
         if size <= 100000:
@@ -57,7 +58,6 @@ def calculate_dir_size(name, node):
     for new_name,value in node.items():
         if new_name != 'up':
             if isinstance(value,dict):
-                new_size = calculate_dir_size(name+'/'+new_name,value)
                 size += new_size
             else:
                 size += int(value)

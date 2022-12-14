@@ -6,6 +6,8 @@ row = 0
 col = 1
 score = {"6,10":1}
 
+# sets and pairwise
+
 def main():
     file = open('day9_input.txt', 'r')
     for line in file:

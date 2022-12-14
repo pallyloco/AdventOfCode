@@ -37,6 +37,8 @@ def main():
     #    print(t)
     #for v in visible_trees:
     #    print(v)
+    # in C#  a[i][j]  is an array of arrays
+    #        a[i,j] is a proper 2d array
 
     num_visible_trees = 0
     for column in range(num_cols):
@@ -65,7 +67,7 @@ def visible_trees_horizontal(line):
             reversed_trees.append(0)
 
     reversed_trees = reversed(reversed_trees)
-    return [i|j for (i,j) in zip(visible_trees,reversed_trees)]
+    return [i or j for i,j in zip(visible_trees,reversed_trees)]
 
 
 

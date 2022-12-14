@@ -26,9 +26,9 @@ def draw_pixel (cycle, x):
     if not pos:
         print()
     if x-1 <= pos <= x+1:
-        print("#",end="")
+        print("\033[41m \033[0m",end="")
     else:
-        print(".",end="")
+        print(" ",end="")
 
 def signal_strength (cycle, x):
     if cycle < 20:
