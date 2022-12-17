@@ -10,9 +10,7 @@ def main():
     # [[6]]
     pair = [ [[2]], [[6]], ]
  
-    for r,line in enumerate(map(str.rstrip,file)):
-        if not line:
-            continue
+    for r,line in enumerate(filter(bool,map(str.rstrip,file))):
         pair.append(eval(line))
     
     pair_sorted = sorted(pair,key=functools.cmp_to_key(compare))
