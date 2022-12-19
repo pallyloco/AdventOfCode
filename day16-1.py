@@ -1,61 +1,142 @@
-import DictionaryGrid as dg
-import re
+import re                           # regular expressions
+from astar import AStar             # A* algorithm
 MAX_MINS = 30
 
+# ----------------------------------------------------------------------------
+# main code
+# ----------------------------------------------------------------------------
 def main():
-    file = open("day16_test_input.txt", 'r')
-    nodes = Pipes_and_vents()
+    file = open("day16_input.txt", 'r')
+    vents = Vents()
 
+    # read the input and create "Vent" objeccts
     for line in map(str.rstrip,file):
-        # "Valve AA has flow rate=0; tunnels lead to valves DD, II, BB"
+
         print("line:",line)
-        regex = re.match(r".*?Valve ([A-Z]+) .*?rate=(\d+).*?valves? (.*)",line)
-        if not regex:
-            print (f"line is <{line}>, WTF!")
+        regex = re.match(r".*?Valve (?P<valve_key>[A-Z]+) .*?rate=(?P<rate>\d+).*?valves? (?P<neighbours>.*)",line)
 
-        valve_key = regex.group(1)
-        rate = int(regex.group(2))
-        pipes = regex.group(3)
-        dest_valve_keys = map(str.strip, pipes.split(","))
-
-        nodes.add(Pipe_or_vent(valve_key))
-        nodes.get(valve_key).rate = rate
+        vents.add(Vent(regex.group('valve_key')))
+        vents.get(regex.group('valve_key')).rate = int(regex.group('rate'))
+        dest_valve_keys = map(str.strip, regex.group('neighbours').split(","))
 
         for dest_valve_key in dest_valve_keys:
-            nodes.add(Pipe_or_vent(dest_valve_key))
-            nodes.get(valve_key).add_child(nodes.get(dest_valve_key))
+            vents.add(Vent(dest_valve_key))
+            vents.get(regex.group('valve_key')).add_child(vents.get(dest_valve_key))
 
-    vents = Vents(nodes.get('AA'))
-    print ('AA rate is',nodes.get('AA').rate)
-    vents_seen = vents.find_all_paths()
- #   for vent in vents_seen:
- #       print (vent)
+    # create all the valid states for these vents, based on open/closed, etc
+    states = States(vents)
+
+    # calculate minimum costs via astar
+    dijkstra = AStar(states.all_states["0AA"])
+    final_node = dijkstra.find_until(lambda astar_obj, node_obj : astar_obj.get_length_path(node_obj) == MAX_MINS-1) 
+    total = sum(node.obj.flow for node in dijkstra.get_path(final_node))
+    print(total)
+
+# ============================================================================
+class States:
+# ============================================================================
+
+    # ----------------------------------------------------------------------------
+    # constructor
+    # ----------------------------------------------------------------------------
+    def __init__(self,vents):
+        self.vents = vents
+        num = len([v for v  in vents if v.rate !=0])
+        self.max_vent_states = 2**num        
+        
+        # give each vent an index, so we can use it to create flags for open/
+        # closed vents
+        for index,v in enumerate ([v for v  in vents if v.rate !=0]):
+            v.index = index
+
+        # get a list of all possible vent open/close states
+        self.all_states = {}
+
+        for vent_state in range(self.max_vent_states):
+            flow = sum([v.rate for v in vents if v.rate!=0 and  (vent_state>>v.index)%2])
+            cost = sum([v.rate for v in vents if v.rate!=0 and  not (vent_state>>v.index)%2])
+
+            for v in vents:
+                state = State(vent_state,v.key,flow,cost)
+                self.all_states[state.key] = state         
+        
+        # once we have all possible states, calculate children
+        for state in self.all_states.values():
+            self.update_children(state)
+
+    # ----------------------------------------------------------------------------
+    # create the links between states
+    # ----------------------------------------------------------------------------
+    def update_children (self,state):
+
+        vent = self.vents.get(state.vent_key)
+        vent_state = state.vent_state
+        
+        # maybe we want to open a vent?
+        if vent.index is not None and not (vent_state>>vent.index)%2:
+            new_vent_state = vent_state + 2**vent.index
+            state_child = self.all_states[State.make_key(new_vent_state,vent.key)]        
+            state.add_child(state_child)
+        
+        for vent_child in vent.children():
+            state_child = self.all_states[State.make_key(vent_state,vent_child.key)]        
+            state.add_child(state_child)
 
 
-class Pipes_and_vents:
-    def __init__(self, type="valve"):
-        self.pipes_and_vents = {}
-        self.type = type
+# ============================================================================
+class State:
+# ============================================================================
+
+    @classmethod
+    def make_key (c,vent_state,vent_key):
+        return f"{vent_state}{vent_key}"
+
+    # ----------------------------------------------------------------------------
+    # constructor
+    # ----------------------------------------------------------------------------
+    def __init__(self,vent_state,vent_key,flow,cost):
+        self.vent_state = vent_state
+        self.vent_key = vent_key
+        self.key = State.make_key(vent_state,vent_key)
+        self.kids = []
+        self.eta = 0
+        self.cost = cost
+        self.flow = flow
+    
+    def children(self):
+        return self.kids
+
+    # ----------------------------------------------------------------------------
+    # add child
+    # ----------------------------------------------------------------------------
+    def add_child(self, state):
+        self.kids.append(state)
+
+# ============================================================================
+class Vents:
+# ============================================================================
+    def __iter__(self):
+        return iter(self.vents.values())
+    def __init__(self):
+        self.vents = {}
     def add(self,obj,type="valve"):
         if self.get(obj.key) is None:
-            self.pipes_and_vents[obj.key] = obj
-    def exists (self,key):
-        return key in self.pipes_and_vents.keys()
+            self.vents[obj.key] = obj
     def get (self,key):
-        if self.exists(key): 
-            return self.pipes_and_vents[key]
+        if key in self.vents.keys(): 
+            return self.vents[key]
         return None
 
-class Pipe_or_vent:
-    def __init__(self,id,type="valve"):
+# ============================================================================
+class Vent:
+# ============================================================================
+    def __init__(self,id):
         self.cost = 1
         self.rate = 0
         self.key = id
         self.child_ids = {}
         self.eta = 0
-        self.type = type
-        self.open_valve_states = []
-
+        self.index = None
     
     def add_child( self, obj):
         self.child_ids[obj.key] = obj
@@ -63,99 +144,9 @@ class Pipe_or_vent:
     def children (self):
         return self.child_ids.values()
 
- 
-    
-class Vents:
-    # Maximize the additions of rates
-    # -------------------------------------------------------------------------
-    # constructor
-    # -------------------------------------------------------------------------
-    def __init__(self,start_obj):
-
-        # private
-        self._all_nodes = dict()
-        self._current_node = None           # what node are we currently looking at?
-
-        node = Node(start_obj)
-        self._all_nodes[start_obj.key] = node
-        self.start_node = node
-
-        # public
-        self.progress_sub = lambda i:None   # callback function (user defined)
-        self.progress_freq = None           # how often should the callback function be called
-
-    # -------------------------------------------------------------------------
-    # find_all_paths - without the state repeating itself
-    # -------------------------------------------------------------------------
-    def find_all_paths (self):
-
-        self.all_paths = list()
-
-        self.current = self.start_node
-        self.current.was_visisted = True
-
-        open_valves = ""
-        self.append_children(self.current," AA[],",open_valves)
-
-        return self.all_paths
-
-    
-
-
-    def append_children(self,node,path,open_valves,waterflow=0,total_flow=0):
-
-        if len(path.split(",")) < MAX_MINS+2:
-            for child_obj in node.obj.children():
-
-                # if this state for this node already exists, do not repeat
-                if f"{child_obj.key}[{open_valves}]" in path:
-                    continue
-
-                child_node = Node( child_obj, node)
-                self._all_nodes[child_node.id] = child_node
-                newpath = path + " " + child_node.id + f"[{open_valves}]-{waterflow}-{total_flow+waterflow}" + ","
-                self.append_children(child_node,newpath, open_valves,waterflow,total_flow+waterflow)
-
-                # if valve has not already been opened, another option is to open it
-                if child_obj.rate != 0 and child_obj.key not in open_valves:
-                    new_open_valves = f"{open_valves}-{child_obj.key}"
-                    self.append_children(child_node, newpath + " open,", new_open_valves, waterflow + child_obj.rate,total_flow+2*waterflow)
-
-        if len(path.split(",")) >= MAX_MINS: 
-            if total_flow > 1650: print (total_flow,path)
-
-            self.all_paths.append((total_flow,path))
-
-                    
-
- 
-    # -------------------------------------------------------------------------
-    # get_path
-    # -------------------------------------------------------------------------
-    def get_path (self,node, max_nodes = 800):
-        count = 0
-        nodes = [node]
-        while ( next_node := node.prev) and count < max_nodes:
-            nodes.insert(0,next_node)
-            node = next_node
-            count += 1
-        
-        return nodes
-    
-
-
-#########################################################################################
-class Node:
-
-    def __init__(self,obj,prev=None):
-        self.obj = obj
-        self.id = obj.key 
-        self.fcost = 0
-        self.was_visited = False
-
-
 # ===================================================================
 # Entry point
 # ===================================================================
 if __name__ == '__main__':
-    main()
+    main()    
+ 
