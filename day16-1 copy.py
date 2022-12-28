@@ -1,6 +1,5 @@
 import re                           # regular expressions
 from astar import AStar             # A* algorithm
-import time
 MAX_MINS = 30
 
 # ----------------------------------------------------------------------------
@@ -16,8 +15,7 @@ def main():
         print("line:",line)
         regex = re.match(r".*?Valve (?P<valve_key>[A-Z]+) .*?rate=(?P<rate>\d+).*?valves? (?P<neighbours>.*)",line)
 
-        if not vents.exists(regex.group('valve_key')):
-            vents.add(Vent(regex.group('valve_key')))
+        vents.add(Vent(regex.group('valve_key')))
         vents.get(regex.group('valve_key')).rate = int(regex.group('rate'))
         dest_valve_keys = map(str.strip, regex.group('neighbours').split(","))
 
@@ -27,7 +25,6 @@ def main():
 
     # create all the valid states for these vents, based on open/closed, etc
     states = States(vents)
-    states.all_states["0AA"] = State(0,'AA',0,0,states)
 
     # calculate minimum costs via astar
     dijkstra = AStar(states.all_states["0AA"])
@@ -44,9 +41,29 @@ class States:
     # ----------------------------------------------------------------------------
     def __init__(self,vents):
         self.vents = vents
-        self.flow_and_cost_lookup = {}
-        self.all_states = {}
+        num = len([v for v  in vents if v.rate !=0])
+        self.max_vent_states = 2**num        
         
+        # give each vent an index, so we can use it to create flags for open/
+        # closed vents
+        for index,v in enumerate ([v for v  in vents if v.rate !=0]):
+            v.index = index
+
+        # get a list of all possible vent open/close states
+        self.all_states = {}
+
+        for vent_state in range(self.max_vent_states):
+            flow = sum([v.rate for v in vents if v.rate!=0 and  (vent_state>>v.index)%2])
+            cost = sum([v.rate for v in vents if v.rate!=0 and  not (vent_state>>v.index)%2])
+
+            for v in vents:
+                state = State(vent_state,v.key,flow,cost)
+                self.all_states[state.key] = state         
+        
+        # once we have all possible states, calculate children
+        for state in self.all_states.values():
+            self.update_children(state)
+
     # ----------------------------------------------------------------------------
     # create the links between states
     # ----------------------------------------------------------------------------
@@ -56,33 +73,15 @@ class States:
         vent_state = state.vent_state
         
         # maybe we want to open a vent?
-        if vent.rate != 0 and not (vent_state>>vent.index)%2:
+        if vent.index is not None and not (vent_state>>vent.index)%2:
             new_vent_state = vent_state + 2**vent.index
-            key = State.make_key(new_vent_state,vent.key)
-            if key not in self.all_states.keys():
-                flow, cost = self.flow_and_costs(new_vent_state)
-                self.all_states[key] = State(new_vent_state, vent.key, flow,cost,self)
             state_child = self.all_states[State.make_key(new_vent_state,vent.key)]        
             state.add_child(state_child)
-
-        # just moving to a new vent
+        
         for vent_child in vent.children():
-            key = State.make_key(vent_state,vent_child.key)
-            if key not in self.all_states.keys():
-                flow, cost = self.flow_and_costs(vent_state)
-                self.all_states[key] = State(vent_state, vent_child.key, flow,cost,self)
-            state_child = self.all_states[key]        
+            state_child = self.all_states[State.make_key(vent_state,vent_child.key)]        
             state.add_child(state_child)
 
-    # ----------------------------------------------------------------------------
-    # calculate the cost to move to this state, and the flow rate associated with it
-    # ----------------------------------------------------------------------------
-    def flow_and_costs(self,vent_state):
-        if vent_state not in self.flow_and_cost_lookup.keys(): 
-            flow = sum([v.rate for v in self.vents if v.rate!=0 and  (vent_state>>v.index)%2])
-            cost = sum([v.rate for v in self.vents if v.rate!=0 and  not (vent_state>>v.index)%2])
-            self.flow_and_cost_lookup[vent_state] = (flow,cost)
-        return self.flow_and_cost_lookup[vent_state]
 
 # ============================================================================
 class State:
@@ -95,28 +94,22 @@ class State:
     # ----------------------------------------------------------------------------
     # constructor
     # ----------------------------------------------------------------------------
-    def __init__(self,vent_state,vent_key,flow,cost,states):
+    def __init__(self,vent_state,vent_key,flow,cost):
         self.vent_state = vent_state
         self.vent_key = vent_key
         self.key = State.make_key(vent_state,vent_key)
-        self.kids = None
+        self.kids = []
         self.eta = 0
         self.cost = cost
         self.flow = flow
-        self.states = states
     
-    def children(self,dummy):
-        if self.kids is None:
-            self.kids = []
-            self.states.update_children(self)
+    def children(self):
         return self.kids
 
     # ----------------------------------------------------------------------------
     # add child
     # ----------------------------------------------------------------------------
     def add_child(self, state):
-        if self.kids is None:
-            self.kids = []
         self.kids.append(state)
 
 # ============================================================================
@@ -126,11 +119,9 @@ class Vents:
         return iter(self.vents.values())
     def __init__(self):
         self.vents = {}
-    def add(self,obj):
+    def add(self,obj,type="valve"):
         if self.get(obj.key) is None:
             self.vents[obj.key] = obj
-    def exists(self,key):
-        return self.get(key)
     def get (self,key):
         if key in self.vents.keys(): 
             return self.vents[key]
@@ -139,19 +130,13 @@ class Vents:
 # ============================================================================
 class Vent:
 # ============================================================================
-    index = -1
-    @classmethod
-    def get_new_index(cls):
-        cls.index += 1
-        return cls.index
-
     def __init__(self,id):
         self.cost = 1
         self.rate = 0
         self.key = id
         self.child_ids = {}
         self.eta = 0
-        self.index = Vent.get_new_index()
+        self.index = None
     
     def add_child( self, obj):
         self.child_ids[obj.key] = obj
@@ -169,4 +154,3 @@ if __name__ == '__main__':
 
     total_time = end - start
     print("\n"+ str(total_time))
- 

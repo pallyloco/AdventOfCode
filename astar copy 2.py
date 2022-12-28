@@ -1,7 +1,4 @@
-import functools
-from dataclasses import dataclass, field
-from queue import PriorityQueue
-
+import dumper
 ###############################################################################
 class AStar:
 
@@ -18,13 +15,13 @@ class AStar:
     #                 then finding the shortest possible path is not guarenteeed
     #
     #   astar = Astar(some_obj)
-    #   final_node = astar.find_until(cb_function) # cb function returns true if final state is reached
+    #   final_node = astar.find_until(final_obj.key)
     #   print(f"Final node id: {final_node.id}")
     #   print(f"Cost to get to final node: {final_node.cost}")
     #   print("Path to get there:")
     #   nodes = astar.get_path(final_node)
     #   for node in nodes:
-    #       print(f"id: {node.id} cost: {node.cost}")
+    #       print(f"id: {node.id} cost: {node.cost}"")
 
     # -------------------------------------------------------------------------
     # constructor
@@ -34,65 +31,65 @@ class AStar:
         # private
         self._all_nodes = dict()
         self._current_node = None           # what node are we currently looking at?
-        self._prioritized_queue = PriorityQueue()
 
         node = Node(start_obj)
         self._all_nodes[start_obj.key] = node
-        self._prioritized_queue.put(PrioritizedItem(node.fcost,node))
-        self.max_depth = None
-        
+
+        # public
+        self.progress_sub = lambda i:None   # callback function (user defined)
+        self.progress_freq = None           # how often should the callback function be called
+
     # -------------------------------------------------------------------------
     # find_until
     # -------------------------------------------------------------------------
-    def find_until (self, cb_routine):
-
+    def find_until (self, final_obj_key):
+ 
         # set the current node to be the lowest cost neighbour
         while current := self._find_lowest_cost_node() :
-            self.get_path_str(current)
 
             # current node is visited
             current.was_visited = True
+
             self._current_node = current
             
             # are we are done?
-            if cb_routine(self,current): 
-                print ("All Done!")
-                return [self._current_node]
+            if current.obj.key == final_obj_key: break
+ 
+            if not current.obj.children():
+                print (f"OMG, {current.obj.r+1},{current.obj.c+1} is barren!")
 
             # get all new neighbours for this node
-            
-            if self.max_depth is None or current.time_least_visited < self.max_depth: 
-                for child_obj in current.obj.children(self,current):
+            for child_obj in current.obj.children():
 
-                    cost = current.cost+child_obj.cost 
-                    child_node = Node( child_obj, cost, current )
+                child_node = Node( child_obj, current.cost + child_obj.cost, current )
 
-                    # skip any node that has already been visited
-                    if child_obj.key in self._all_nodes:
-                        if self._all_nodes[child_obj.key].was_visited:
-                            continue
-                    
-                    self._update_node(current,child_node)
-        
-        # all nodes have been visited
-        return [n for n in self._all_nodes.values()]
+                # skip any node that has already been visited
+                if child_obj.key in self._all_nodes:
+                    if self._all_nodes[child_obj.key].was_visited:
+                        continue
+                
+                # update the node
+                self._update_node(current,child_node)
+
+        return self._current_node
  
     # -------------------------------------------------------------------------
     # find the node with the lowest cost
     # -------------------------------------------------------------------------
     def _find_lowest_cost_node (self) :
         
-        try:
-            while node := self._prioritized_queue.get(block=False):
-                if not node.item.was_visited: return node.item
-        except Exception:
-            return
+        # a list of nodes in ordering of descending costs 
+        unvisited_nodes = [n for n in self._all_nodes.values() if not n.was_visited]
+        if not unvisited_nodes:
+            raise Exception("no lower cost nodes to find")
+        for node in sorted(unvisited_nodes,key=lambda x:x.fcost):
+            return node        
         return
 
     # -------------------------------------------------------------------------
     # get_path
     # -------------------------------------------------------------------------
-    def get_path (self,node,max_nodes = 20000):
+    def get_path (self,node, max_nodes = 800):
         count = 0
         nodes = [node]
         while ( next_node := node.prev) and count < max_nodes:
@@ -102,14 +99,6 @@ class AStar:
         
         return nodes
     
-    def get_path_str (self, node):
-        return node.path_least_visited
-        
-    # -------------------------------------------------------------------------
-    # get_length_of path
-    # -------------------------------------------------------------------------
-    def get_length_path (self,node):
-        return node.path_least_visited
 
     # -------------------------------------------------------------------------
     # update node if exists, else create it
@@ -121,29 +110,12 @@ class AStar:
         # if node does not exists:
         if new_node.id not in self._all_nodes:
             self._all_nodes[new_node.id] = new_node
-    
-            new_node.cost = updated_cost
-            new_node.time_least_visited = current.time_least_visited + 1
-            new_node.path_least_visited = f"{current.path_least_visited}\n{new_node.id}"
-            new_node.fcost = new_node.cost + new_node.obj.eta(new_node)
-
-            x = PrioritizedItem(new_node.fcost,new_node)
-
-            self._prioritized_queue.put( x )
-
-        new_node = self._all_nodes[new_node.id]
-
+        
         # compare old costs to new costs
         if updated_cost < self._all_nodes[new_node.id].cost:
-            new_node.cost = updated_cost
-            new_node.time_least_visited = current.time_least_visited + 1
-            new_node.path_least_visited = current.path_least_visited + f"\n{new_node.id}"
-            new_node.fcost = new_node.cost + new_node.obj.eta(new_node)
-
-            x = PrioritizedItem(new_node.fcost,new_node)
-
-            self._prioritized_queue.put( x )
+            self._all_nodes[new_node.id].cost = updated_cost
         
+        self._all_nodes[new_node.id].fcost = self._all_nodes[new_node.id].cost + self._all_nodes[new_node.id].obj.eta
         
 
 #########################################################################################
@@ -156,16 +128,3 @@ class Node:
         self.id = obj.key 
         self.fcost = 0
         self.was_visited = False
-        self.path_least_visited = ""
-        self.time_least_visited = 0
-    def __gt__(self,other):
-        return self.fcost > other.fcost
-    def __lt__(self,other):
-        return self.fcost < other.fcost
-    
-
-
-@dataclass(order=True)
-class PrioritizedItem:
-    priority: int
-    item: object = field()
