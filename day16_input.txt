@@ -1,3 +1,10 @@
+Valve TM has flow rate=0; tunnels lead to valves KF, AA
+Valve LG has flow rate=8; tunnels lead to valves DD, UA
+Valve IZ has flow rate=20; tunnels lead to valves LY, XC
+Valve XF has flow rate=0; tunnels lead to valves PB, QD
+Valve FE has flow rate=0; tunnels lead to valves ZW, KF
+Valve ZP has flow rate=0; tunnels lead to valves MT, AI
+Valve CL has flow rate=0; tunnels lead to valves JN, AI
 Valve UA has flow rate=0; tunnels lead to valves VW, LG
 Valve VP has flow rate=0; tunnels lead to valves MB, GU
 Valve KY has flow rate=0; tunnels lead to valves BZ, CJ
