@@ -55,19 +55,17 @@ class AStar:
     # -------------------------------------------------------------------------
     # constructor
     # -------------------------------------------------------------------------
-    def __init__(self, start_obj: DijkstraObject, max_heap_size: int = 0,
+    def __init__(self, start_obj: DijkstraObject, zero: Cost = 0,
                  print_at_n_intervals: int = 1000):
 
-        self.max_nodes = max_heap_size
         self._all_nodes: dict[str, Node] = dict()
         self._current_node: Optional[Node] = None  # what node are we currently looking at?
         self._heap = list()
-        self.max_heap_size = max_heap_size
         self.print_intervals = print_at_n_intervals
 
-        node = Node(start_obj)
+        node = Node(start_obj, zero)
         self._all_nodes[start_obj.key()] = node
-        heapq.heappush(self._heap, (node.forecasted_cost, node))
+        heapq.heappush(self._heap, PrioritizedItem(node.forecasted_cost, node))
 
     # -------------------------------------------------------------------------
     # find_until
@@ -133,7 +131,7 @@ class AStar:
     def get_path(self, node):
         count = 0
         nodes = [node]
-        while self.max_nodes == 0 or count < self.max_nodes:
+        while True:
             next_node = node.prev
             if not next_node:
                 break
@@ -167,26 +165,18 @@ class AStar:
                 self._add_to_heap(new_node)
 
     def _add_to_heap(self, node):
-        if self._heap and self.max_heap_size and len(self._heap) >= self.max_heap_size:
-            if node.forecasted_cost < self._heap[-1][0]:
-                self._heap.pop()
-            else:
-                return
-        heapq.heappush(self._heap, (node.forecasted_cost, node))
+        heapq.heappush(self._heap, PrioritizedItem(node.forecasted_cost, node))
 
 #########################################################################################
 class Node:
     __slots__ = ('obj', 'cumulative_cost', 'prev', 'id', 'forecasted_cost', 'was_visited', 'path_least_visited', 'time_least_visited')
 
-    def __init__(self, obj, cumulative_cost=None, prev=None):
+    def __init__(self, obj, cumulative_cost=0, prev=None):
         self.obj: Any = obj
-        if cumulative_cost is None:
-            self.cumulative_cost: Cost = obj.edge_cost()
-        else:
-            self.cumulative_cost = cumulative_cost
+        self.cumulative_cost: Cost = cumulative_cost
         self.prev: Optional[Node] = prev
         self.id: str = obj.key()
-        self.forecasted_cost: Cost = 0
+        self.forecasted_cost: Cost = self.cumulative_cost
         self.was_visited: bool = False
         self.path_least_visited = ""
         self.time_least_visited = 0

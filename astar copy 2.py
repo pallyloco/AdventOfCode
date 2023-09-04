@@ -82,7 +82,7 @@ class AStar:
         unvisited_nodes = [n for n in self._all_nodes.values() if not n.was_visited]
         if not unvisited_nodes:
             raise Exception("no lower cost nodes to find")
-        for node in sorted(unvisited_nodes,key=lambda x:x.fcost):
+        for node in sorted(unvisited_nodes, key=lambda x:x.forecasted_cost):
             return node        
         return
 

@@ -1,7 +1,8 @@
 from __future__ import annotations
 import functools
+import heapq
 from dataclasses import dataclass, field
-from queue import PriorityQueue
+import heapq
 from typing import Protocol, TypeVar, Optional, Callable, Any
 
 
@@ -11,8 +12,6 @@ class CostProtocol(Protocol):
     def __lt__(self: Cost, other: Cost) -> bool: pass
 
     def __add__(self: Cost, other: Cost) -> Cost: pass
-
-    def __sub__(self: Cost, other: Cost) -> Cost: pass
 
 
 Cost = TypeVar("Cost", bound=CostProtocol)
@@ -56,16 +55,20 @@ class AStar:
     # -------------------------------------------------------------------------
     def __init__(self, start_obj: DijkstraObject, zero: Cost = 0, print_at_n_intervals: int = 1000):
 
-        # private
+        self.print_intervals = print_at_n_intervals
+        self.heap = list()
+
         self._all_nodes: dict[str, Node] = dict()
         self._current_node: Optional[Node] = None  # what node are we currently looking at?
-        self._prioritized_queue = PriorityQueue()
-        self.print_intervals = print_at_n_intervals
 
         node = Node(start_obj, zero)
         self._all_nodes[start_obj.key] = node
-        self._prioritized_queue.put(PrioritizedItem(node.forecasted_cost, node))
+        heapq.heappush(self.heap, PrioritizedItem(node.forecasted_cost, node))
         self.max_depth = None
+
+    # -------------------------------------------------------------------------
+    # cheating (getting rid of nodes that we will never visit)
+    # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
     # find_until
@@ -77,7 +80,6 @@ class AStar:
         while current := self._find_lowest_cost_node():
             if delme == current.obj.key():
                 pass
-            delme = current.obj.key()
             self.get_path_str(current)
             if not iterations % self.print_intervals:
                 print(iterations, current.cumulative_cost, current.forecasted_cost, current.obj.eta(),
@@ -118,11 +120,12 @@ class AStar:
     def _find_lowest_cost_node(self):
 
         try:
-            while node := self._prioritized_queue.get(block=False):
-                if not node.item.was_visited: return node.item
-        except Exception:
+            while True:
+                pi = heapq.heappop(self.heap)
+                if not pi.item.was_visited:
+                    return pi.item
+        except IndexError:
             return
-        return
 
     # -------------------------------------------------------------------------
     # get_path
@@ -141,17 +144,11 @@ class AStar:
         return node.path_least_visited
 
     # -------------------------------------------------------------------------
-    # get_length_of path
-    # -------------------------------------------------------------------------
-    def get_length_path(self, node):
-        return node.path_least_visited
-
-    # -------------------------------------------------------------------------
     # update node if exists, else create it
     # -------------------------------------------------------------------------
     def _update_node(self, current, new_node):
 
-        updated_cost = new_node.cumulative_cost
+        updated_cost: Cost = new_node.cumulative_cost
 
         # if node does not exist:
         if new_node.id not in self._all_nodes:
@@ -165,38 +162,8 @@ class AStar:
                 new_node.forecasted_cost = new_node.cumulative_cost + new_node.obj.eta(new_node)
 
         x = PrioritizedItem(new_node.forecasted_cost, new_node)
-        self._prioritized_queue.put(x)
+        heapq.heappush(self.heap, x)
 
-
-        # # compare old costs to new costs
-        # if updated_cost < self._all_nodes[new_node.id].cumulative_cost:
-
-
-        # if node does not exist:
-        # if new_node.id not in self._all_nodes:
-        #     self._all_nodes[new_node.id] = new_node
-        #
-        #     new_node.cumulative_cost = updated_cost
-        #     new_node.time_least_visited = current.time_least_visited + 1
-        #     new_node.path_least_visited = f"{current.path_least_visited}\n{new_node.id}"
-        #     new_node.forecasted_cost = new_node.cumulative_cost + new_node.obj.eta(new_node)
-        #
-        #     x = PrioritizedItem(new_node.forecasted_cost, new_node)
-        #
-        #     self._prioritized_queue.put(x)
-        #
-        # new_node = self._all_nodes[new_node.id]
-        #
-        # # compare old costs to new costs
-        # if updated_cost < self._all_nodes[new_node.id].cumulative_cost:
-        #     new_node.forecasted_cost = new_node.forecasted_cost - new_node. - updated_cost
-        #     new_node.cumulative_cost = updated_cost
-        #     new_node.time_least_visited = current.time_least_visited + 1
-        #     new_node.path_least_visited = current.path_least_visited + f"\n{new_node.id}"
-        #     new_node.forecasted_cost = new_node.cumulative_cost + new_node.obj.eta(new_node)
-        #     x = PrioritizedItem(new_node.forecasted_cost, new_node)
-        #
-        #     self._prioritized_queue.put(x)
 
 
 #########################################################################################

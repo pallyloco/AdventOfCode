@@ -1,251 +1,334 @@
+from __future__ import annotations 
 import re                           # regular expressions
-from astar import AStar             # A* algorithm
+from astar import AStar,Node             # A* algorithm
 import time
+import itertools
+from typing import Iterable,Iterator,Optional,Dict
+
+## Super Nurses
+# 450-668-1010
+# 25301 
+# Algomed
+# Union MD 4175 Jean Talon West 
+
 MAX_MINS = 26
 final_max_flow = 0
+final_paths = {}
+vents_all_open = None
+max_flow_cost = None
+vents: Vents = None
+
+num_children = 0
 
 # ----------------------------------------------------------------------------
 # main code
 # ----------------------------------------------------------------------------
 def main():
+    global max_flow_cost
+    global vents
+    
     file = open("day16_input.txt", 'r')
     vents = Vents()
 
     # read the input and create "Vent" objeccts
     for line in map(str.rstrip,file):
 
-        print("line:",line)
+        #print("line:",line)
         regex = re.match(r".*?Valve (?P<valve_key>[A-Z]+) .*?rate=(?P<rate>\d+).*?valves? (?P<neighbours>.*)",line)
 
-        if not vents.exists(regex.group('valve_key')):
+        #valve_key,rate,neighbours = regex.group()
+
+        if vents.get(regex.group('valve_key')) is None:
             vents.add(Vent(regex.group('valve_key')))
         vents.get(regex.group('valve_key')).rate = int(regex.group('rate'))
         dest_valve_keys = map(str.strip, regex.group('neighbours').split(","))
 
         for dest_valve_key in dest_valve_keys:
-            vents.add(Vent(dest_valve_key))
+            if vents.get(dest_valve_key) is None:
+                vents.add(Vent(dest_valve_key))
             vents.get(regex.group('valve_key')).add_child(vents.get(dest_valve_key))
 
-    # vents and states are not the same thing, set up the states
-    states = States(vents)
-    initial_state = 0 # all vents closed
+    # for each vent, calculate the distance the next node with a valve with a rate > 0
+    vents.distances_to_nearest_vent()
+    vents.update_valve_info()
+
+
+    initial_vent_state = VentState(vents)
     you_vent_state = 'AA'
     elephant_vent_state = 'AA'
-    flow,cost = states.flow_and_costs(0)
-    initial_state = State(initial_state,you_vent_state,elephant_vent_state,flow,cost,states)
-    states.all_states[initial_state.key] = initial_state
+    flow = vents.flow(initial_vent_state)
+    cost = vents.cost(initial_vent_state)
+    initial_state = State(initial_vent_state,you_vent_state,elephant_vent_state,flow,cost)
+    max_flow_cost = vents.max_flow()
 
     # calculate minimum costs via astar
     dijkstra = AStar(initial_state)
-    dijkstra.find_until(astar_cb) 
+    dijkstra.max_depth = MAX_MINS
+    dijkstra.find_until(lambda x,y: astar_cb(x,y)) 
+    print ("Number of children ",num_children)
 
 
 
 
 
+
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 def astar_cb(astar_obj,node_obj):
     global final_max_flow
-    n = astar_obj.get_length_path(node_obj)
-    # print(n)
-    total = sum(node.obj.flow for node in astar_obj.get_path(node_obj))
-    if total > final_max_flow:
-        print (f"turn:{n} total_flow:{total} node_cost:{node_obj.cost} key:{node_obj.obj.key}")
-        final_max_flow = total
 
-        nodes = astar_obj.get_path(node_obj)
-        i =0
-        for tmpnode in nodes:
-            i+=1
-            total = sum(node.obj.flow for node in astar_obj.get_path(tmpnode))
-            print(f"{i})\tcost:{tmpnode.cost}\ttotal:{total}\tflow:{tmpnode.obj.flow} id: {tmpnode.id}")
+    path = node_obj.path_least_visited
+    time_step = node_obj.time_least_visited
 
-        total = sum(node.obj.flow for node in astar_obj.get_path(node_obj))
-        print(total)
-
-    return False
-
-# ============================================================================
-class States:
-# ============================================================================
-
-    # ----------------------------------------------------------------------------
-    # constructor
-    # ----------------------------------------------------------------------------
-    def __init__(self,vents):
-        self.vents = vents
-        self.flow_and_cost_lookup = {}
-        self.all_states = {}
-        self.all_vents_number = None
-        self.max_flow = 0
-    
-    def all_vents_open (self,state):
-        if self.all_vents_number is None:
-            vent_state = 0
-            for vent in self.vents:
-                if vent.rate != 0:
-                    vent_state += 2**vent.index
-            self.all_vents_number = vent_state
-            print (self.all_vents_number)
-        return state.vent_state == self.all_vents_number
-
-    # ----------------------------------------------------------------------------
-    # create the links between states
-    # ----------------------------------------------------------------------------
-    def update_children (self,state,path_length):
-
-        # exceeds the maximum path length
-        if path_length >= 26-1:
-            return
+    total_flow = max_flow_cost*time_step - node_obj.cost
+    if total_flow > final_max_flow:
+        end = time.time()
+        total_time = end - start
+        print (time_step, node_obj.cost, node_obj.forecasted_cost - node_obj.cost, total_flow, total_time, path)
+        final_max_flow = total_flow
 
 
-        # get info about current state
-        you_vent = self.vents.get(state.you_vent_key)
-        elephant_vent = self.vents.get(state.elephant_vent_key)
-        vent_state = state.vent_state
-        
-        # possible moves for you
-        for you_vc in [vc for vc in you_vent.children()]:
-
-            for elephant_vc in [vc for vc in elephant_vent.children()]:
-
-                if elephant_vent.actively_openning:
-                    new_vent_state = vent_state + 2**elephant_vent.index
-                    key = State.make_key(new_vent_state,you_vc.key,elephant_vent.key)
-                    if key not in self.all_states.keys():
-                        flow, cost = self.flow_and_costs(new_vent_state)
-                        self.all_states[key] = State(new_vent_state, you_vc.key, elephant_vent.key,flow,cost,self)
-                    state_child = self.all_states[key]        
-                    state.add_child(state_child)
-                    elephant_vent.actively_openning = False
-
-                if you_vent.actively_openning:
-                    new_vent_state = vent_state + 2**you_vent.index
-                    key = State.make_key(new_vent_state,you_vent.key,elephant_vc.key)
-                    if key not in self.all_states.keys():
-                        flow, cost = self.flow_and_costs(new_vent_state)
-                        self.all_states[key] = State(new_vent_state,you_vent.key,elephant_vc.key,flow,cost,self)
-                    state_child = self.all_states[key]        
-                    state.add_child(state_child)
-
-                # maybe we want to open a vent if it is not already open? (elephant)
-                if elephant_vent.rate != 0 and not (vent_state>>elephant_vent.index)%2:
-                    elephant_vent.actively_openning = True
-                if you_vent.rate != 0 and not (vent_state>>you_vent.index)%2:
-                    you_vent.actively_openning = True
-
-                if you_vent.rate != 0 and not (vent_state>>you_vent.index)%2:
-                    new_vent_state = vent_state + 2**you_vent.index
-                    key = State.make_key(new_vent_state,you_vent.key,elephant_vc.key)
-                    if key not in self.all_states.keys():
-                        flow, cost = self.flow_and_costs(new_vent_state)
-                        self.all_states[key] = State(new_vent_state,you_vent.key,elephant_vc.key,flow,cost,self)
-                    state_child = self.all_states[key]        
-                    state.add_child(state_child)
-
-                # just moving to a new vent
-                key = State.make_key(vent_state,you_vc.key,elephant_vc.key)
-                if key not in self.all_states.keys():
-                    flow, cost = self.flow_and_costs(vent_state)
-                    self.all_states[key] = State(vent_state, you_vc.key, elephant_vc.key,flow,cost,self)
-                state_child = self.all_states[key]        
-                state.add_child(state_child)
-
-    # ----------------------------------------------------------------------------
-    # calculate the cost to move to this state, and the flow rate associated with it
-    # ----------------------------------------------------------------------------
-    def flow_and_costs(self,vent_state):
-        if vent_state not in self.flow_and_cost_lookup.keys(): 
-            flow = sum([v.rate for v in self.vents if v.rate!=0 and  (vent_state>>v.index)%2])
-            cost = sum([v.rate for v in self.vents if v.rate!=0 and  not (vent_state>>v.index)%2])
-            self.flow_and_cost_lookup[vent_state] = (flow,cost)
-        return self.flow_and_cost_lookup[vent_state]
+    return time_step == MAX_MINS
 
 # ============================================================================
 class State:
 # ============================================================================
 
-    @classmethod
-    def make_key (c,vent_state,you_vent_key,elephant_vent_key):
-        return f"{vent_state}-{you_vent_key}-{elephant_vent_key}"
+    __slots__ = ('vent_state','you_vent_key','elephant_vent_key','key','cost','flow','unique_kids')
+    @staticmethod
+    def make_key (vent_state : str, you_vent_key: str ,elephant_vent_key :str) -> str:
+        one,two =  sorted( (you_vent_key,elephant_vent_key) ) 
+        return f"{vent_state}-{one}-{two}"
 
     # ----------------------------------------------------------------------------
     # constructor
     # ----------------------------------------------------------------------------
-    def __init__(self,vent_state,you_vent_key,elephant_vent_key,flow,cost,states):
-        self.vent_state = vent_state
-        self.you_vent_key = you_vent_key
-        self.elephant_vent_key = elephant_vent_key
-        self.key = State.make_key(vent_state,you_vent_key,elephant_vent_key)
-        self.kids = None
-        self.eta = 0
-        self.cost = cost
-        self.flow = flow
-        self.states = states
-    
-    def copy (self,state):
-        return State(self.vent_state,self.you_vent_key,self.elephant_vent_key,self.flow,self.cost,self.states)
+    def __init__(self,vent_state: VentState ,you_vent_key: str ,elephant_vent_key: str, 
+                            flow: int, cost: int):
+        global num_children
+        self.vent_state: VentState = vent_state
+        self.you_vent_key: str = you_vent_key
+        self.elephant_vent_key: str = elephant_vent_key
+        self.key: str = State.make_key(vent_state,you_vent_key,elephant_vent_key)
+        self.cost: int = cost
+        self.flow: int = flow
+        self.unique_kids: Dict[str, State] = {}
+        num_children += 1
 
-    def children(self,path_length):
-        self.kids = []
-        self.states.update_children(self,path_length)
-#        print (f"initial state: {self.key}")
-#        for k in self.kids:
-#            print(f"   {k.key}, {k.cost}")
-        return self.kids
+    
+    # ----------------------------------------------------------------------------
+    # estimated cost to get to the finish line
+    # ----------------------------------------------------------------------------
+    def eta(self,node):
+
+        #return 0
+        # THIS DOES NOT IMPROVE SPEED OR MEMORY!
+
+        you_vent = vents.get(self.you_vent_key)
+        ele_vent = vents.get(self.elephant_vent_key)
+        this_state = node.obj
+
+        time_left=MAX_MINS - node.time_least_visited        
+        
+#        nearest_valves_to_me = (c for c in vents.closest_vents[you_vent.key] if c[0]<time_left and this_state.vent_state.is_closed(c[1]))
+#        nearest_valves_to_ele = (c for c in vents.closest_vents[ele_vent.key] if c[0]<time_left and this_state.vent_state.is_closed(c[1]))
+#        nearest_valves = [*nearest_valves_to_me, *nearest_valves_to_ele]
+        
+#        unique_valves_open = {v[1].key: v for v in nearest_valves}.values()
+
+        eta = 0
+        flow_rate = sum(v.rate for v in vents.valves if this_state.vent_state.is_closed(v))
+        open_valve_rates = sorted((v.rate for v in vents.valves if this_state.vent_state.is_closed(v)),reverse=True)
+        for turn,rate in enumerate(open_valve_rates):
+            if turn < time_left:
+                eta += flow_rate/2
+                flow_rate-= rate
+
+        return max(eta,0)
+
+    # ----------------------------------------------------------------------------
+    # get the next possible states
+    # ----------------------------------------------------------------------------
+    def children(self,*_) -> Iterable[State]:
+        self.unique_kids.clear()
+
+        # get info about current state
+        you_vent = vents.get(self.you_vent_key)
+        ele_vent = vents.get(self.elephant_vent_key)
+        vent_state = self.vent_state        
+        
+        # open the vent (will only work if it has already been turned)
+        new_vent_state = vent_state.open_any_turned_valves()
+
+        # find all possible children - can stay at the same spot only if rate and is not already openned
+        you_kids = [v for v in you_vent.children_and_self() if v!=you_vent or (v==you_vent and v.rate and vent_state.is_closed(v))]
+        ele_kids = [v for v in ele_vent.children_and_self() if v!=ele_vent or (v==ele_vent and v.rate and vent_state.is_closed(v))]
+        
+        # loop thru all possible kids between you and elephant
+        for you_vc in you_kids:
+            for elephant_vc in ele_kids:
+                key = State.make_key(new_vent_state,you_vc.key,elephant_vc.key)
+
+                # turning a vent
+                if you_vc.key == you_vent.key and elephant_vc.key == ele_vent.key: 
+                    tmp_vent_state = new_vent_state.turn(you_vc)
+                    tmp_vent_state = tmp_vent_state.turn(elephant_vc)
+                    flow = vents.flow(tmp_vent_state)
+                    cost = vents.cost(tmp_vent_state)
+                    self.add_child( State(tmp_vent_state, you_vc.key, elephant_vc.key,flow,cost))
+                elif you_vc.key == you_vent.key: 
+                    tmp_vent_state = new_vent_state.turn(you_vc)
+                    flow = vents.flow(tmp_vent_state)
+                    cost = vents.cost(tmp_vent_state)
+                    self.add_child( State(tmp_vent_state, you_vc.key, elephant_vc.key,flow,cost))
+                elif elephant_vc.key == ele_vent.key: 
+                    tmp_vent_state = new_vent_state.turn(elephant_vc)
+                    flow = vents.flow(tmp_vent_state)
+                    cost = vents.cost(tmp_vent_state)
+                    self.add_child( State(tmp_vent_state, you_vc.key, elephant_vc.key,flow,cost))
+        
+                # add the new state to the children
+                flow = vents.flow(new_vent_state)
+                cost = vents.cost(new_vent_state)
+                self.add_child( State(new_vent_state, you_vc.key, elephant_vc.key,flow,cost))
+
+        return self.unique_kids.values()
 
     # ----------------------------------------------------------------------------
     # add child
     # ----------------------------------------------------------------------------
-    def add_child(self, state):
-        if self.kids is None:
-            self.kids = []
-        self.kids.append(state)
+    def add_child(self, state: State) -> Dict[str,State]:
+        if self.unique_kids is None:
+            self.unique_kids = {}
+        self.unique_kids[state.key] = state
 
 # ============================================================================
 class Vents:
 # ============================================================================
-    def __iter__(self):
+    __slots__ = ('vents','nearest_vents_lookup','closest_vents','valves')
+    def __iter__(self) -> Iterator[Vent]:
         return iter(self.vents.values())
+    
+    def __contains__(self, key: str) -> bool:
+        return key in self.vents
+        
     def __init__(self):
         self.vents = {}
-    def add(self,obj):
-        if self.get(obj.key) is None:
+        self.nearest_vents_lookup = {}
+        self.closest_vents = {}
+        self.valves = list()
+    
+    def __str__(self):
+        return "-"*(len(self.valves))
+
+    def update_valve_info(self):
+        self.valves = [v for v in self if v.rate]
+        for index,v in enumerate(self.valves):
+            v.valve_index = index
+
+    def add(self,obj: Vent):
+        if obj.key not in self:
             self.vents[obj.key] = obj
-    def exists(self,key):
-        return self.get(key)
-    def get (self,key):
-        if key in self.vents.keys(): 
+        if obj.rate:
+            self.valves.append(obj)
+
+    def get (self,key:str) -> Optional[Vent]:
+        if key in self.vents: 
             return self.vents[key]
-        return None
+        return 
+
+    def distances_to_nearest_vent(self):
+        for v in self.vents.values():
+            self._list_of_nearest_vents(v)
+
+
+    def _list_of_nearest_vents (self,vent: Vent):
+        if vent.key in self.nearest_vents_lookup:
+            return self.nearest_vents_lookup[vent.key]
+        
+        dijkstra = AStar(vent)
+        shortest_paths = dijkstra.find_until(lambda x,y: False)
+        self.nearest_vents_lookup[vent.key] = {}
+        self.closest_vents[vent.key] = list()
+        
+        for node in shortest_paths :
+            if node.obj.rate != 0:               
+                #self.nearest_vents_lookup[vent.key][node.id] = (node.time_least_visited, [n.id for n in dijkstra._get_path(node)] ) 
+                self.closest_vents[vent.key].append((node.time_least_visited,node.obj))
+
+    def flow(self,vent_state: VentState)-> int:
+        return sum(v.rate for v in self.valves if vent_state.is_open(v))
+
+    def cost(self,vent_state: VentState) -> int:
+        return sum(v.rate for v in self.valves if not vent_state.is_open(v))
+
+    def max_flow (self) -> int:
+        return sum (v.rate for v in self.valves)
+
+
 
 # ============================================================================
 class Vent:
 # ============================================================================
-    index = -1
-    @classmethod
-    def get_new_index(cls):
-        cls.index += 1
-        return cls.index
+    __slots__ = ('rate','key','cost','child_ids','valve_index')
+    def __eq__(self,other: Vent) -> bool:
+        return self.key == other.key
 
-    def __init__(self,id):
-        self.cost = 1
+    def __init__(self, id: int):
         self.rate = 0
         self.key = id
+        self.cost = 1
         self.child_ids = {}
-        self.eta = 0
-        self.index = Vent.get_new_index()
-        self.actively_openning = False
+        self.valve_index = None
     
-    def add_child( self, obj):
+    def eta(self,node: AStar) -> int:
+        return 0
+
+    def add_child( self, obj: Vent) -> None:
         self.child_ids[obj.key] = obj
 
-    def children (self):
+    def children (self,*_) -> Iterable[Vent]:
         return self.child_ids.values()
 
+    def children_and_self (self) -> Iterable[Vent]:
+        return itertools.chain(self.child_ids.values(), (self,))
+    
 
+class VentState (str):
 
+    def open(self,vent: Vent) -> VentState:
+        if self.is_turning(vent):
+            return VentState(self[:vent.valve_index] + '*' + self[vent.valve_index+1:])
+        return self
 
+    def turn(self,vent: Vent) -> VentState:
+        if self.is_closed(vent):
+            return VentState(self[:vent.valve_index] + '+' + self[vent.valve_index+1:])
+        return self
 
+    def is_open(self,vent: Vent) -> bool:
+        return vent.valve_index is not None and self[vent.valve_index] == '*'
+
+    def is_closed(self,vent: Vent) -> bool:
+        return vent.valve_index is not None and self[vent.valve_index] == '-'
+
+    def is_turning(self,vent: Vent) -> bool:
+        return vent.valve_index is not None and self[vent.valve_index] == '+'
+    
+    def open_any_turned_valves(self) -> VentState:
+        return VentState(re.sub(r'\+', "*", self))
+
+    def all_vents_open(self,vents) -> bool:
+        global vents_all_open
+        if vents_all_open is None:
+            vent_state = VentState(vents)
+            for vent in vents.valves:
+                if vent.rate:
+                    vent_state.turn(vent)
+                    vent_state .open(vent)
+            vents_all_open = vent_state
+        return vents_all_open == self
 
 
 
@@ -259,6 +342,7 @@ class Vent:
 # Entry point
 # ===================================================================
 if __name__ == '__main__':
+    global start
     start = time.time()
     main()    
     end = time.time()

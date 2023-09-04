@@ -88,7 +88,7 @@ class AStar:
 
 
 
-        for node in sorted(unvisited_nodes,key=lambda x:x.fcost):
+        for node in sorted(unvisited_nodes, key=lambda x:x.forecasted_cost):
             x = self.get_path_str(node)
             return node        
         return

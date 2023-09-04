@@ -2,7 +2,8 @@ from __future__ import annotations
 import heapq
 from dataclasses import dataclass, field
 from typing import Protocol, TypeVar, Optional, Callable, Any, TypeAlias
-key: TypeAlias = str
+
+NodeId: TypeAlias = str
 
 
 class CostProtocol(Protocol):
@@ -56,20 +57,21 @@ class AStar:
     # -------------------------------------------------------------------------
     # constructor
     # -------------------------------------------------------------------------
-    def __init__(self, start_obj: DijkstraObject, max_heap_size: int = 0,
-                 print_at_n_intervals: int = 1000):
+    def __init__(self, start_obj: DijkstraObject,zero = 0,
+                 print_at_n_intervals: int = 5000):
 
-        self.max_nodes = max_heap_size
-        self._all_nodes: dict[key, Node] = dict()
         self._current_node: Optional[Node] = None  # what node are we currently looking at?
-        self._heap: list[Cost] = list()
-        self._cost_nodes: dict[Cost, list[key]] = dict()
-        self.max_heap_size: int = max_heap_size
-        self.print_intervals:int = print_at_n_intervals
+        self._heap: dict[Cost, list[Node]] = dict()
+        self._unvisited_nodes: dict[NodeId, Node] = dict()
+        self._visited_nodes: dict[NodeId, Node] = dict()
+        self._current_low_cost: Optional[Cost] = None
 
-        node = Node(start_obj)
-        self._all_nodes[start_obj.key()] = node
-        self._add_to_heap(node)
+        self.print_intervals: int = print_at_n_intervals
+
+        node = Node(start_obj, cumulative_cost=zero)
+        self._unvisited_nodes[node.id] = node
+        self.heap: Heap = Heap()
+        self.heap.insert(node.forecasted_cost, node)
 
     # -------------------------------------------------------------------------
     # find_until
@@ -79,7 +81,7 @@ class AStar:
         while True:
 
             # set the current node to be the lowest cost neighbour
-            current: Node = self._find_lowest_cost_node()
+            current: Node = self.heap.get_lowest()
             if current is None:
                 break
 
@@ -91,30 +93,27 @@ class AStar:
 
             # current node is visited
             current.was_visited = True
+            self._visited_nodes[current.id] = current
             self._current_node = current
 
             # are we are done?
             if cb_routine(current.obj):
                 print("All Done!")
-                print("heap size is: ", len(self._heap))
                 return [self._current_node]
 
             # get all new neighbours for this node
             for child_obj in current.obj.children(self, current):
 
-                # skip any node that has already been visited
-                if child_obj.key() in self._all_nodes:
-                    if self._all_nodes[child_obj.key()].was_visited:
-                        continue
+                if self._visited_nodes.get(child_obj.key()):
+                    break
 
                 cumulative_cost = current.cumulative_cost + child_obj.edge_cost()
                 child_node = Node(child_obj, cumulative_cost, current)
 
-                self._update_node(current, child_node)
+                self._update_node(child_node)
 
         # all nodes have been visited
-        print("heap size is: ", len(self._heap))
-        return [n for n in self._all_nodes.values()]
+        return [n for n in self._visited_nodes.values()]
 
     # -------------------------------------------------------------------------
     # get_path
@@ -122,7 +121,7 @@ class AStar:
     def get_path(self, node):
         count = 0
         nodes = [node]
-        while self.max_nodes == 0 or count < self.max_nodes:
+        while True:
             next_node = node.prev
             if not next_node:
                 break
@@ -135,74 +134,38 @@ class AStar:
     # -------------------------------------------------------------------------
     # update node if exists, else create it
     # -------------------------------------------------------------------------
-    def _update_node(self, current, new_node):
+    def _update_node(self, new_node):
 
-        updated_cost = new_node.cumulative_cost
+        updated_cost: Cost = new_node.cumulative_cost
 
         # if node does not exist:
-        if new_node.id not in self._all_nodes:
-            self._all_nodes[new_node.id] = new_node
-
+        if new_node.id not in self._unvisited_nodes:
+            self._unvisited_nodes[new_node.id] = new_node
             new_node.cumulative_cost = updated_cost
             new_node.forecasted_cost = new_node.cumulative_cost + new_node.obj.eta(new_node)
-            self._add_to_heap(new_node)
+            self.heap.insert(new_node.forecasted_cost, new_node)
 
         else:
-            new_node = self._all_nodes[new_node.id]
-            if updated_cost < self._all_nodes[new_node.id].cumulative_cost:
+            new_node = self._unvisited_nodes[new_node.id]
+            if not new_node.was_visited and updated_cost < new_node.cumulative_cost:
                 new_node.forecasted_cost = new_node.forecasted_cost - new_node.cumulative_cost - updated_cost
                 new_node.cumulative_cost = updated_cost
                 new_node.forecasted_cost = new_node.cumulative_cost + new_node.obj.eta(new_node)
-                self._add_to_heap(new_node)
-
-    # -------------------------------------------------------------------------
-    # keep track of sorted costs in heap, with associated nodes
-    # -------------------------------------------------------------------------
-    def _add_to_heap(self, node):
-        if node.forecasted_cost not in self._cost_nodes:
-            self._cost_nodes[node.forecasted_cost] = list()
-        if node.id not in self._cost_nodes[node.forecasted_cost]:
-            self._cost_nodes[node.forecasted_cost].append(node.id)
-        if node.forecasted_cost not in self._heap:
-            heapq.heappush(self._heap, node.forecasted_cost)
-
-    # -------------------------------------------------------------------------
-    # find the node with the lowest cumulative_cost
-    # -------------------------------------------------------------------------
-    def _find_lowest_cost_node(self) -> Optional[Optional]:
-
-        try:
-            while True:
-                lowest_cost = self._heap[0]
-
-                # get any node with this cost, as long as it has not already
-                # been visited.
-                if self._cost_nodes[lowest_cost]:
-                    node_id = self._cost_nodes[lowest_cost].pop()
-                    node = self._all_nodes[node_id]
-                    if not node.was_visited:
-                        return node
-
-                else:
-                    heapq.heappop(self._heap)
-
-        except IndexError:
-            return None
+                self.heap.insert(new_node.forecasted_cost, new_node)
 
 
 #########################################################################################
 class Node:
-    __slots__ = ('obj', 'cumulative_cost', 'prev', 'id', 'forecasted_cost', 'was_visited', 'path_least_visited', 'time_least_visited')
+    __slots__ = ('obj', 'cumulative_cost', 'prev', 'id', 'forecasted_cost', 'was_visited', 'path_least_visited',
+                 'time_least_visited')
 
-    def __init__(self, obj, cumulative_cost=None, prev=None):
+    def __init__(self, obj, cumulative_cost=0, prev=None):
         self.obj: Any = obj
-        if cumulative_cost is None:
-            self.cumulative_cost: Cost = obj.edge_cost()
-        else:
-            self.cumulative_cost = cumulative_cost
+        self.cumulative_cost: Cost = cumulative_cost
         self.prev: Optional[Node] = prev
         self.id: str = obj.key()
-        self.forecasted_cost: Cost = 0
+#        self.forecasted_cost = self.cumulative_cost + self.obj.eta(self)
+        self.forecasted_cost = self.cumulative_cost
         self.was_visited: bool = False
         self.path_least_visited = ""
         self.time_least_visited = 0
@@ -214,7 +177,100 @@ class Node:
         return self.forecasted_cost < other.forecasted_cost
 
 
-@dataclass(order=True)
-class PrioritizedItem:
-    priority: Cost
-    item: object = field()
+@dataclass()
+class HeapNode:
+    cost: Cost
+    data: list[Any] = field(default_factory=list)
+    parent: Optional[HeapNode] = None
+    right: Optional[HeapNode] = None
+    left: Optional[HeapNode] = None
+
+
+class Heap:
+    def __init__(self):
+        self.root: Optional[HeapNode] = None
+        self.start_node: Optional[HeapNode] = None
+
+    def print(self):
+        print("\ntree")
+        self._print(self.root)
+
+    def _print(self, node):
+        if node is None:
+            print(node)
+            return
+        rstring = node.right
+        if node.right is not None:
+            rstring = str(node.right.cost)
+        lstring = node.left
+        if node.left is not None:
+            lstring = str(node.left.cost)
+
+        print(node.cost, len(node.data), "l", lstring, "r", rstring)
+
+        if node.left is not None:
+            self._print(node.left)
+        if node.right is not None:
+            self._print(node.right)
+
+    def insert(self, cost: Cost, datum: Any):
+        if self.root is None:
+            self.root = HeapNode(cost)
+            self.root.data.append(datum)
+            self.start_node = self.root
+            return
+
+        self._insert(self.root, cost, datum)
+
+    def get_lowest(self) -> Any:
+        #self.print()
+        node = self.root
+        if node is None:
+            return node
+
+        while node.left is not None:
+            node = node.left
+        lowest = node.data.pop()
+
+        if not node.data:
+            if node.parent is not None:
+                node.parent.left = node.right
+                if node.right is not None:
+                    node.right.parent = node.parent
+                self.start_node = node.parent.right
+            else:
+                self.root = node.right
+                if self.root is not None:
+                    self.root.parent = None
+                self.start_node = self.root
+
+        #self.print()
+        return lowest
+
+    def _insert(self, node: HeapNode, cost, datum):
+        while True:
+            if node is None:
+                break
+
+            if cost < node.cost:
+                if node.left is None:
+                    node.left = HeapNode(cost)
+                    node.left.data.append(datum)
+                    node.left.parent = node
+                    break
+                else:
+                    node = node.left
+
+            elif node.cost < cost:
+                if node.right is None:
+                    node.right = HeapNode(cost)
+                    node.right.data.append(datum)
+                    node.right.parent = node
+                    break
+                else:
+                    node = node.right
+                    self._insert(node.right, cost, datum)
+
+            else:
+                node.data.append(datum)
+                break

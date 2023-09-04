@@ -83,7 +83,7 @@ class AStar:
         # a list of nodes in ordering of descending costs 
         unvisited_nodes = [n for n in self._all_nodes.values() if not n.was_visited]
         # look into priority queues
-        for node in sorted(unvisited_nodes,key=lambda x:x.fcost):
+        for node in sorted(unvisited_nodes, key=lambda x:x.forecasted_cost):
             x = self.get_path_str(node)
             return node        
         return
