@@ -1,7 +1,7 @@
 from __future__ import annotations
 import re  # regular expressions
 
-from astar_best_so_far2 import AStar, Node  # A* algorithm
+from Astar import AStar, Node  # A* algorithm
 import time
 from enum import Enum
 from dataclasses import dataclass
