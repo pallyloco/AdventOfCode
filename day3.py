@@ -3,13 +3,12 @@ import functools
 
 
 def read_n_lines_at_a_time(file, n) -> list[str]:
-    lines: list[str] = ["" for _ in range(n)]
-    line: str
-    for line, index in zip(file, itertools.cycle(range(n))):
-        line = line.rstrip()
-        lines[index] = line
-        if index == n - 1:
+    lines: list[str] = list()
+    for counter, line in enumerate(map(str.rstrip, file)):
+        lines.append(line)
+        if (counter + 1) % n == 0:
             yield lines
+            lines.clear()
 
 
 def main(day):
