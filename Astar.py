@@ -165,10 +165,10 @@ class AStar:
         heapq.heappush(self.heap, x)
 
 
-
 #########################################################################################
 class Node:
-    __slots__ = ('obj', 'cumulative_cost', 'prev', 'id', 'forecasted_cost', 'was_visited', 'path_least_visited', 'time_least_visited')
+    __slots__ = ('obj', 'cumulative_cost', 'prev', 'id', 'forecasted_cost', 'was_visited', 'path_least_visited',
+                 'time_least_visited')
 
     def __init__(self, obj, cumulative_cost=0, prev=None):
         self.obj: Any = obj

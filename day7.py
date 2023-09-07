@@ -5,7 +5,7 @@ from typing import Optional
 
 tree: dict[str, Optional[dict | int]] = {"up": None, "/": dict()}
 current_directory: dict[str, Optional[dict | int]] = tree["/"]
-dir_sizes = dict()
+dir_sizes: dict[str:int] = dict()
 MAX_SIZE = 70000000
 REQUIRED_SIZE = 30000000
 MIN_SIZE = 100000
@@ -41,11 +41,7 @@ def main(day):
         """
         To begin, find all of the directories with a total size of at most MIN_SIZE, 
         then calculate the sum of their total sizes. """
-        total = 0
-        for _, size in dir_sizes.items():
-            size = int(size)
-            if size <= MIN_SIZE:
-                total += size
+        total = sum((size for size in map(int, dir_sizes.values()) if size <= MIN_SIZE))
         print(f"Total size of directories whose size is less than {MIN_SIZE} = {total}")
 
     else:
@@ -55,14 +51,9 @@ def main(day):
         You need to find a directory you can delete that will free up enough space to run the update.
         Choose the smallest directory that satisfies the need
         """
-
         total_used = dir_sizes['//']
         min_delete = total_used - (MAX_SIZE - REQUIRED_SIZE)
-        dir_size_to_delete = MAX_SIZE
-        for size in dir_sizes.values():
-            size = int(size)
-            if size >= min_delete:
-                dir_size_to_delete = min(size, dir_size_to_delete)
+        dir_size_to_delete = min((size for size in map(int, dir_sizes.values()) if size >= min_delete))
 
         print("Minimize size of directory to free up enough space:", dir_size_to_delete)
 
