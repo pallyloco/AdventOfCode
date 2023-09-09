@@ -25,8 +25,7 @@ def main(num_knots: int):
 
     nodes_visited.add(str(knots[-1]))
 
-    for line in file:
-        line = line.rstrip()
+    for line in map(str.rstrip, file):
 
         """
         Then, by following a hypothetical series of motions (your puzzle input)
