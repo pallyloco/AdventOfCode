@@ -20,7 +20,7 @@ class DijkstraObject(Protocol):
 
     def children(self, from_obj: DijkstraObject): pass
 
-    def edge_cost(self) -> Cost: pass
+    def edge_cost(self, prev: DijkstraObject) -> Cost: pass
 
     def eta(self, node=None) -> Cost: pass
 
@@ -57,11 +57,11 @@ class AStar:
         self.print_intervals = print_at_n_intervals
         self.heap = list()
 
-        self._all_nodes: dict[str, Node] = dict()
+        self.all_nodes: dict[str, Node] = dict()
         self._current_node: Optional[Node] = None  # what node are we currently looking at?
 
         node = Node(start_obj, zero)
-        self._all_nodes[start_obj.key] = node
+        self.all_nodes[start_obj.key] = node
         heapq.heappush(self.heap, PrioritizedItem(node.forecasted_cost, node))
         self.max_depth = None
 
@@ -72,7 +72,8 @@ class AStar:
     # -------------------------------------------------------------------------
     # find_until
     # -------------------------------------------------------------------------
-    def find_until(self, cb_routine: Callable[[DijkstraObject], bool]) -> list[Node]:
+    def find_until(self, cb_have_we_reached_desired_end: Callable[[DijkstraObject], bool]) \
+            -> Optional[Node]:
         iterations = 0
 
         # set the current node to be the lowest cost neighbour
@@ -88,16 +89,16 @@ class AStar:
             self._current_node = current
 
             # are we are done?
-            if cb_routine(current.obj):
-                return [self._current_node]
+            if cb_have_we_reached_desired_end(current.obj):
+                return self._current_node
 
             # get all new neighbours for this node
             if self.max_depth is None or current.time_least_visited < self.max_depth:
                 for child_obj in current.obj.children():
 
                     # skip any node that has already been visited
-                    if child_obj.key in self._all_nodes:
-                        if self._all_nodes[child_obj.key].was_visited:
+                    if child_obj.key in self.all_nodes:
+                        if self.all_nodes[child_obj.key].was_visited:
                             continue
 
                     cost = current.cumulative_cost + child_obj.edge_cost(current)
@@ -105,8 +106,8 @@ class AStar:
 
                     self._update_node(child_node)
 
-        # all nodes have been visited
-        return [n for n in self._all_nodes.values()]
+        # never reached the end goal
+        return None
 
     # -------------------------------------------------------------------------
     # find the node with the lowest cost
@@ -145,12 +146,12 @@ class AStar:
         updated_cost: Cost = new_node.cumulative_cost
 
         # if node does not exist:
-        if new_node.id not in self._all_nodes:
-            self._all_nodes[new_node.id] = new_node
+        if new_node.id not in self.all_nodes:
+            self.all_nodes[new_node.id] = new_node
             new_node.forecasted_cost = new_node.cumulative_cost + new_node.obj.eta(new_node)
 
         else:
-            new_node = self._all_nodes[new_node.id]
+            new_node = self.all_nodes[new_node.id]
             if updated_cost < new_node.cumulative_cost:
                 new_node.cumulative_cost = updated_cost
                 new_node.forecasted_cost = new_node.cumulative_cost + new_node.obj.eta(new_node)
