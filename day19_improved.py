@@ -30,8 +30,8 @@ def main():
     file = open("day19_input.txt", 'r')
     for num, line in enumerate(map(str.rstrip, file)):
         Blueprint = BluePrint(line)
-        if num != 22:
-            continue
+        #if num != 22:
+        #    continue
         astar = AStar(State(), zero=Cost(), print_at_n_intervals=50000)
 
         # cb function returns true if final state is reached

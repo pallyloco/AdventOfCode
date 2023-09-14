@@ -1,6 +1,4 @@
 from __future__ import annotations
-import functools
-import heapq
 from dataclasses import dataclass, field
 import heapq
 from typing import Protocol, TypeVar, Optional, Callable, Any
@@ -18,10 +16,11 @@ Cost = TypeVar("Cost", bound=CostProtocol)
 
 
 class DijkstraObject(Protocol):
-    key: str
-    cost: Cost
+    def key(self) -> str: pass
 
-    def children(self): pass
+    def children(self, from_obj: DijkstraObject): pass
+
+    def edge_cost(self) -> Cost: pass
 
     def eta(self, node=None) -> Cost: pass
 
@@ -39,7 +38,7 @@ class AStar:
     #             Note that if this returns zero, then this
     #             algorithm will behave like a simple dijkstra's algorithm
     #               * if eta ever gives an estimate that is higher than the actual costs,
-    #                 then finding the shortest possible path is not guarenteeed
+    #                 then finding the shortest possible path is not guaranteed
     #
     #   astar = Astar(some_obj)
     #   final_node = astar.find_until(cb_function) # cb function returns true if final state is reached
@@ -75,13 +74,11 @@ class AStar:
     # -------------------------------------------------------------------------
     def find_until(self, cb_routine: Callable[[DijkstraObject], bool]) -> list[Node]:
         iterations = 0
-        delme = None
+
         # set the current node to be the lowest cost neighbour
         while current := self._find_lowest_cost_node():
-            if delme == current.obj.key():
-                pass
             self.get_path_str(current)
-            if not iterations % self.print_intervals:
+            if self.print_intervals and not iterations % self.print_intervals:
                 print(iterations, current.cumulative_cost, current.forecasted_cost, current.obj.eta(),
                       current.obj.key())
             iterations += 1
@@ -92,24 +89,21 @@ class AStar:
 
             # are we are done?
             if cb_routine(current.obj):
-                print("All Done!")
                 return [self._current_node]
 
             # get all new neighbours for this node
             if self.max_depth is None or current.time_least_visited < self.max_depth:
-                for child_obj in current.obj.children(self, current):
+                for child_obj in current.obj.children():
 
                     # skip any node that has already been visited
                     if child_obj.key in self._all_nodes:
                         if self._all_nodes[child_obj.key].was_visited:
                             continue
 
-                    cost = current.cumulative_cost + child_obj.edge_cost()
+                    cost = current.cumulative_cost + child_obj.edge_cost(current)
                     child_node = Node(child_obj, cost, current)
 
-                    self._update_node(current, child_node)
-            else:
-                print("No children")
+                    self._update_node(child_node)
 
         # all nodes have been visited
         return [n for n in self._all_nodes.values()]
@@ -117,7 +111,7 @@ class AStar:
     # -------------------------------------------------------------------------
     # find the node with the lowest cost
     # -------------------------------------------------------------------------
-    def _find_lowest_cost_node(self):
+    def _find_lowest_cost_node(self) -> Optional[Node]:
 
         try:
             while True:
@@ -125,7 +119,7 @@ class AStar:
                 if not pi.item.was_visited:
                     return pi.item
         except IndexError:
-            return
+            raise NodeNotFoundError
 
     # -------------------------------------------------------------------------
     # get_path
@@ -146,7 +140,7 @@ class AStar:
     # -------------------------------------------------------------------------
     # update node if exists, else create it
     # -------------------------------------------------------------------------
-    def _update_node(self, current, new_node):
+    def _update_node(self, new_node):
 
         updated_cost: Cost = new_node.cumulative_cost
 
@@ -163,6 +157,10 @@ class AStar:
 
         x = PrioritizedItem(new_node.forecasted_cost, new_node)
         heapq.heappush(self.heap, x)
+
+
+class NodeNotFoundError(Exception):
+    pass
 
 
 #########################################################################################
