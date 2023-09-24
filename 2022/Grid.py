@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Protocol, Optional
+from typing import Protocol, Optional, Any
 
 
 # no limits on r,c numbers
@@ -7,6 +7,7 @@ from typing import Protocol, Optional
 class DataPoint(Protocol):
     row: int
     col: int
+    value: Any
 
 
 class Grid:
@@ -26,19 +27,20 @@ class Grid:
     @staticmethod
     def row_from_key(key: str) -> int:
         row, _ = key.split(",")
-        return row
+        return int(row)
 
     @staticmethod
     def col_from_key(key: str) -> int:
         _, col = key.split(",")
-        return col
+        return int(col)
 
     @staticmethod
     def key(data_point: DataPoint):
         return Grid.create_key(data_point.row, data_point.col)
 
-    def get_data(self):
-        return self._data
+    @property
+    def data(self) -> list[DataPoint]:
+        return self._data.values()
 
     def set_value(self, data_point: DataPoint):
         self._data[Grid.key(data_point)] = data_point
@@ -82,12 +84,6 @@ class Grid:
                 self.south(data_point),
                 self.west(data_point), )
 
-    # def get_row_col_pairs(self):
-    #     return (
-    #         (int(re.match(r'(-?\d+).*?(-?\d+)', index).group(1)), int(re.match(r'(-?\d+).*?(-?\d+)', index).group(2)))
-    #         for
-    #         index in self._data)
-
     def get_row_values(self, row) -> tuple[DataPoint, ...]:
         return tuple(self.get_data_point(row, col)
                      for col in range(self.min_col(), self.max_col() + 1))
@@ -120,23 +116,17 @@ class Grid:
     def num_cols(self) -> int:
         return self.max_col() - self.min_col() + 1
 
-    # def empty(self):
-    #     total = 0
-    #     for row in range(self.min_row(), self.max_row() + 1):
-    #         s = sum((1 for value in self.get_row_values(row) if value is None))
-    #         total += s
-    #     return total
-
     def __str__(self):
         result = ""
         for r in range(self.min_row(), self.max_row() + 1):
             for c in range(self.min_col(), self.max_col() + 1):
-                if self.get_data_point(r, c) is None:
+                dp = self.get_data_point(r, c)
+                if dp is None:
                     result += "."
                 else:
-                    result += "#"
+                    result += str(dp.value)[0]
             result += "\n"
         return result
 
     def __repr__(self):
-        return self.__str__()
+        return f"({self.min_row()}, {self.min_col()}) ({self.max_row()}, {self.max_col()})"
