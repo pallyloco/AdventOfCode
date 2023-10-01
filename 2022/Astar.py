@@ -16,13 +16,25 @@ Cost = TypeVar("Cost", bound=CostProtocol)
 
 
 class DijkstraObject(Protocol):
-    def key(self) -> str: pass
+    def key(self) -> str:
+        """string that uniquely defines this object"""
 
-    def children(self) -> list[DijkstraObject]: pass
+    def children(self) -> list[DijkstraObject]:
+        """list of neighbours"""
 
-    def edge_cost(self, prev: DijkstraObject) -> Cost: pass
+    def edge_cost(self, prev: DijkstraObject) -> Cost:
+        """How much does it cost to get from prev to self"""
 
-    def eta(self, node=None) -> Cost: pass
+    def eta(self, node=None) -> Cost:
+        """
+        estimated time of arrival to the final node.
+
+        Note that if this returns zero, then this
+        algorithm will behave like a simple dijkstra's algorithm
+
+        * if eta ever gives an estimate that is higher than the actual costs,
+        then finding the shortest possible path is not guaranteed
+        """
 
 
 # ##############################################################################
@@ -30,20 +42,11 @@ class AStar:
 
     # USAGE:
     #
-    #   pass in an object that has the following properties/methods
-    #       key - a unique identifier for any object that we might encounter
-    #       children() must return a list of children for this object
-    #       edge_cost(self, from_obj) - the cost of moving to this object
-    #       eta - (function) estimated time of arrival to the final node.  
-    #             Note that if this returns zero, then this
-    #             algorithm will behave like a simple dijkstra's algorithm
-    #               * if eta ever gives an estimate that is higher than the actual costs,
-    #                 then finding the shortest possible path is not guaranteed
-    #
-    #   astar = Astar(some_obj)
+    #   astar = Astar(dijkstra_obj)
     #   final_node: Node = astar.find_until(cb_function)
     #           cb function returns true if final state is reached
     #           - it is passed the current object that is being investigated
+    #
     #   print(f"Final node id: {final_node.id}")
     #   print(f"Cost to get to final node: {final_node.cost}")
     #   print("Path to get there:")

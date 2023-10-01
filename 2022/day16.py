@@ -7,25 +7,30 @@ import time
 import itertools
 from typing import Iterable, Iterator, Optional, Dict
 
-MAX_MINS: int = 18
-final_max_flow_rate: int = 0
-final_max_flow: int = 0
-final_paths = dict()
-vents_all_open = None
-max_flow_cost: Optional[int] = None
-max_minute = 0
+MAX_MINUTES: int = 30
+MAX_MINUTE_PROCESSED: int = 0
+CAN_ELEPHANT_MOVE: bool = False
 
 
 # ============================================================================
 # main code
 # ============================================================================
-def main():
-    global max_flow_cost
+def main(minutes: int, elephant_move: bool):
+    global MAX_MINUTES, CAN_ELEPHANT_MOVE, MAX_MINUTE_PROCESSED
+    MAX_MINUTES = minutes
+    CAN_ELEPHANT_MOVE = elephant_move
+    MAX_MINUTE_PROCESSED = 0
 
     file = open("day16_input.txt", 'r')
     vents = Vents()
 
     # read the input and create "Vent" objects
+    """
+    You scan the cave for other options and discover a network of pipes and pressure-release valves. 
+    You aren't sure how such a system got into a volcano, but you don't have time to complain; 
+    your device produces a report (your puzzle input) of each valve's flow rate if it were 
+    opened (in pressure per minute) and the tunnels you could use to move between the valves.
+    """
     for line in map(str.rstrip, file):
         regex = re.match(r".*?Valve (?P<valve_key>[A-Z]+) .*?rate=(?P<rate>\d+).*?valves? (?P<neighbours>.*)", line)
 
@@ -34,7 +39,7 @@ def main():
         vent.child_id_keys = str.rstrip(regex.group('neighbours'))
         vents.add(vent)
 
-    # go through all the events, and link the child_id_keys to the actual children
+    # go through all the vents, and link the child_id_keys to the actual children
     for vent in vents:
         if vent.child_id_keys is not None:
             for dest_valve_key in vent.child_id_keys.split(","):
@@ -48,45 +53,61 @@ def main():
     you_are_here = 'AA'
     elephant_is_there = 'AA'
     initial_state = State(initial_state_of_all_vents, you_are_here, elephant_is_there, vents, 0)
-    max_flow_cost = vents.max_flow()
 
     # calculate minimum costs via astar
+    """
+    Part 1
+    You estimate it will take you one minute to open a single valve and one minute to 
+    follow any tunnel from one valve to another. What is the most pressure you could release?
+    
+    Part 2
+    With you and an elephant working together for 26 minutes, 
+    what is the most pressure you could release?
+    """
+
     dijkstra = AStar(initial_state, zero=0, print_at_n_intervals=0)
-    final_node: Optional[Node] = dijkstra.find_until(partial(have_we_reached_the_end, vents))
+    final_node: Optional[Node] = dijkstra.find_until(
+        partial(have_we_reached_the_end, vents))
+
     print("Path to get there:")
     total_flow = 0
-    ccost = -210
     if final_node:
         nodes = dijkstra.get_path(final_node)
         for minute, node in enumerate(nodes):
             state = node.obj
             total_flow += state.flow_rate()
-            ccost = ccost + (210 - state.flow_rate())
-            print(f"x{ccost}\tcosts: {node.cumulative_cost},{node.forecasted_cost}\tstate: {node.id}, flow_rate: {state.flow_rate()}, total: {total_flow}")
+            print(f"state: {node.id}, flow_rate: {state.flow_rate()}, total: {total_flow}")
 
         node = nodes[-1]
-        for _ in range(minute, MAX_MINS):
+        for _ in range(minute, MAX_MINUTES):
             state = node.obj
-            ccost = ccost + (210 - state.flow_rate())
             total_flow += state.flow_rate()
-            print(f"x{ccost}\tcosts: {node.cumulative_cost},{node.forecasted_cost}\tstate: {node.id}, flow_rate: {state.flow_rate()}, total: {total_flow}")
+            print(f"state: {node.id}, flow_rate: {state.flow_rate()}, total: {total_flow}")
 
 
 # ----------------------------------------------------------------------------
+# have we completed the task?
 # ----------------------------------------------------------------------------
 def have_we_reached_the_end(vents, state: State) -> bool:
-    global max_minute
+    global MAX_MINUTE_PROCESSED
+
+    # if all vents are open, then we are done
     if state.vent_state.all_vents_open(vents):
         return True
-    if state.minutes > max_minute:
-        max_minute = state.minutes
+
+    # this is just feedback for the user, so they know the program
+    # is running
+    if state.minutes > MAX_MINUTE_PROCESSED:
+        MAX_MINUTE_PROCESSED = state.minutes
         print(state.key())
 
-    return state.minutes == MAX_MINS
+    # if we have exceeded the number of minutes allowed, we are done
+    return state.minutes == MAX_MINUTES
 
 
 # ============================================================================
 # State (dijkstra object needed for AStar algorithm)
+# where are you, where is the elephant, what is the state of all the vents?
 # ============================================================================
 class State:
 
@@ -103,7 +124,7 @@ class State:
         self.vent_state: StateOfAllVents = vent_state
         self.you_are_here: str = you_are_here
         self.elephant_is_there: str = elephant_is_there
-        self._key: str = State.make_key(vent_state, you_are_here, elephant_is_there)+f"__{minutes}"
+        self._key: str = State.make_key(vent_state, you_are_here, elephant_is_there) + f"__{minutes}"
         self.unique_kids: Dict[str, State] = dict()
         self.vents = vents
         self.minutes = minutes
@@ -112,18 +133,25 @@ class State:
         return self._key
 
     def flow_rate(self):
+        """what is the current flow (opened valves)"""
         return sum(v.rate for v in self.vents.valves if self.vent_state.is_open(v))
 
     def edge_cost(self, *_) -> int:
+        """
+        how much does it cost to get to this state?
+        It's the loss of flow rate (what valves are not open?)
+        """
         return sum(v.rate for v in self.vents.valves if not self.vent_state.is_open(v))
 
     # ----------------------------------------------------------------------------
     # estimated cost to get to the finish line
     # ----------------------------------------------------------------------------
     def eta(self, node=None) -> int:
-        #return 0
+        """
+        how much do we estimate it will cost to complete our task?
+        """
 
-        time_left = MAX_MINS - self.minutes
+        time_left = MAX_MINUTES - self.minutes
 
         # maximum lost flow if no valves opened
         potential_flow = sum(v.rate for v in self.vents.valves if not self.vent_state.is_open(v))
@@ -136,7 +164,7 @@ class State:
         opened_flow: int = 0
         best_outflow: int = 0
         for minute in range(time_left):
-            if open_valve_rates and (minute+1)%2:
+            if open_valve_rates and (minute + 1) % 2:
                 opened_flow += open_valve_rates.pop(-1)
                 if open_valve_rates:
                     opened_flow += open_valve_rates.pop(-1)
@@ -147,6 +175,7 @@ class State:
     # get the next possible states
     # ----------------------------------------------------------------------------
     def children(self, *_) -> list[State]:
+        """list of neighbour states"""
         self.unique_kids.clear()
 
         # get info about current state
@@ -161,8 +190,11 @@ class State:
         # is not already opened
         you_kids = [v for v in you_vent.children_and_self() if
                     v != you_vent or (v == you_vent and v.rate and vent_state.is_closed(v))]
-        ele_kids = [v for v in ele_vent.children_and_self() if
-                    v != ele_vent or (v == ele_vent and v.rate and vent_state.is_closed(v))]
+
+        ele_kids = [ele_vent]
+        if CAN_ELEPHANT_MOVE:
+            ele_kids = [v for v in ele_vent.children_and_self() if
+                        v != ele_vent or (v == ele_vent and v.rate and vent_state.is_closed(v))]
 
         # loop through all possible kids between you and elephant
         for you_vc in you_kids:
@@ -201,7 +233,8 @@ class State:
 # ============================================================================
 # ============================================================================
 class Vents:
-    __slots__ = ('vents', 'nearest_vents_lookup', 'closest_vents', 'valves')
+    """ iterable class of all vents and their associated valves """
+    __slots__ = ('vents', 'valves')
 
     def __iter__(self) -> Iterator[Vent]:
         return iter(self.vents.values())
@@ -211,8 +244,6 @@ class Vents:
 
     def __init__(self):
         self.vents: dict[str, Vent] = dict()
-        self.nearest_vents_lookup: dict[str, Vent] = dict()
-        self.closest_vents: dict[str, Vent] = dict()
         self.valves = list()
 
     def __str__(self):
@@ -223,11 +254,10 @@ class Vents:
         for index, v in enumerate(self.valves):
             v.valve_index = index
 
-    def add(self, obj: Vent):
-        if obj.key not in self:
-            self.vents[obj.key] = obj
-        if obj.rate:
-            self.valves.append(obj)
+    def add(self, vent: Vent):
+        self.vents[vent.key] = vent
+        if vent.rate:
+            self.valves.append(vent)
 
     def get(self, key: str) -> Optional[Vent]:
         if key in self.vents:
@@ -277,6 +307,8 @@ class StateOfAllVents(str):
     +   valve is being turned
     """
 
+    vents_all_open: Optional[str] = None
+
     def open_a_vent(self, vent: Vent) -> StateOfAllVents:
         if self.is_turning(vent):
             return StateOfAllVents(self[:vent.valve_index] + '*' + self[vent.valve_index + 1:])
@@ -300,15 +332,14 @@ class StateOfAllVents(str):
         return StateOfAllVents(re.sub(r'\+', "*", self))
 
     def all_vents_open(self, vents) -> bool:
-        global vents_all_open
-        if vents_all_open is None:
+        if self.vents_all_open is None:
             vent_state = StateOfAllVents(vents)
             for vent in vents.valves:
                 if vent.rate:
                     vent_state = vent_state.turn(vent)
                     vent_state = vent_state.open_a_vent(vent)
-            vents_all_open = vent_state
-        return vents_all_open == self
+            self.vents_all_open = vent_state
+        return self.vents_all_open == self
 
     def current_flow_rate(self, vents) -> int:
         return sum((v.rate for v in vents.valves if self.is_open(v)))
@@ -319,12 +350,45 @@ class StateOfAllVents(str):
 # ===================================================================
 if __name__ == '__main__':
     start = time.time()
-    main()
+    main(30, False)
+    main(26, True)
     end = time.time()
 
     total_time = end - start
     print("\n" + str(total_time))
 
+
+"""
+You scan the cave for other options and discover a network of pipes and pressure-release valves. 
+You aren't sure how such a system got into a volcano, but you don't have time to complain; 
+your device produces a report (your puzzle input) of each valve's flow rate if it were 
+opened (in pressure per minute) and the tunnels you could use to move between the valves.
+
+There's even a valve in the room you and the elephants are currently standing in labeled AA. 
+You estimate it will take you one minute to open a single valve and one minute to 
+follow any tunnel from one valve to another. What is the most pressure you could release?
+
+Work out the steps to release the most pressure in 30 minutes. 
+What is the most pressure you can release?
+
+Your puzzle answer was 1724.
+
+--- Part Two ---
+You're worried that even with an optimal approach, the pressure released won't be enough. 
+What if you got one of the elephants to help you?
+
+It would take you 4 minutes to teach an elephant how to open the right valves in the right order, 
+leaving you with only 26 minutes to actually execute your plan. Would having two of you working 
+together be better, even if it means having less time? (Assume that you teach the elephant 
+before opening any valves yourself, giving you both the same full 26 minutes.)
+
+
+With you and an elephant working together for 26 minutes, 
+what is the most pressure you could release?
+
+Your puzzle answer was 2283.
+
+"""
 """
 
 15 days
@@ -349,7 +413,6 @@ state: -**-**-*-**---*-DP-LY__15, flow_rate: 133, total: 709
 
 50.802855253219604
 """
-
 
 """
 18 minutes
