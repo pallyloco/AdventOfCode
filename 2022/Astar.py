@@ -18,7 +18,7 @@ Cost = TypeVar("Cost", bound=CostProtocol)
 class DijkstraObject(Protocol):
     def key(self) -> str: pass
 
-    def children(self, from_obj: DijkstraObject): pass
+    def children(self) -> list[DijkstraObject]: pass
 
     def edge_cost(self, prev: DijkstraObject) -> Cost: pass
 
@@ -52,7 +52,7 @@ class AStar:
     # -------------------------------------------------------------------------
     # constructor
     # -------------------------------------------------------------------------
-    def __init__(self, start_obj: DijkstraObject, zero: Cost = 0, print_at_n_intervals: int = 1000):
+    def __init__(self, start_obj: DijkstraObject, zero: Cost = 0, print_at_n_intervals: int = 10000):
 
         self.print_intervals = print_at_n_intervals
         self.heap = list()
@@ -104,7 +104,7 @@ class AStar:
                     cost = current.cumulative_cost + child_obj.edge_cost(current)
                     child_node = Node(child_obj, cost, current)
 
-                    self._update_node(child_node)
+                    self._update_node(child_node, current)
 
         # never reached the end goal
         return None
@@ -141,7 +141,7 @@ class AStar:
     # -------------------------------------------------------------------------
     # update node if exists, else create it
     # -------------------------------------------------------------------------
-    def _update_node(self, new_node):
+    def _update_node(self, new_node:Node, prev_node: Node):
 
         updated_cost: Cost = new_node.cumulative_cost
 
@@ -155,6 +155,7 @@ class AStar:
             if updated_cost < new_node.cumulative_cost:
                 new_node.cumulative_cost = updated_cost
                 new_node.forecasted_cost = new_node.cumulative_cost + new_node.obj.eta(new_node)
+                new_node.prev = prev_node
 
         x = PrioritizedItem(new_node.forecasted_cost, new_node)
         heapq.heappush(self.heap, x)
@@ -184,6 +185,12 @@ class Node:
 
     def __lt__(self, other):
         return self.forecasted_cost < other.forecasted_cost
+
+    def __str__(self):
+        return self.id
+
+    def __repr__(self):
+        return self.id
 
 
 @dataclass(order=True)
