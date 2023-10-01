@@ -7,7 +7,7 @@ import time
 import itertools
 from typing import Iterable, Iterator, Optional, Dict
 
-MAX_MINS: int = 26
+MAX_MINS: int = 18
 final_max_flow_rate: int = 0
 final_max_flow: int = 0
 final_paths = dict()
@@ -326,64 +326,8 @@ if __name__ == '__main__':
     print("\n" + str(total_time))
 
 """
-20 days
-
-1390000 2502 2825 323 *-+----*-+--**--AI-KS
-
-Path to get there:
-state: ----------------AA-AA__0, flow_rate: 0, total: 0
-state: ----------------BZ-TL__1, flow_rate: 0, total: 0
-state: ----------------AI-KY__2, flow_rate: 0, total: 0
-state: --+-------------AI-CJ__3, flow_rate: 0, total: 0
-state: --*----+--------CJ-MM__4, flow_rate: 11, total: 11
-state: --*----*--------JW-RG__5, flow_rate: 21, total: 32
-state: --*----*--------KB-KS__6, flow_rate: 21, total: 53
-state: --*----*-+----+-KB-KS__7, flow_rate: 21, total: 74
-state: --*----*-*----*-OY-RA__8, flow_rate: 55, total: 129
-state: --*----*-*----*-AO-XC__9, flow_rate: 55, total: 184
-state: --*----*-*----*-CU-IZ__10, flow_rate: 55, total: 239
-state: -+*----*-*+---*-CU-IZ__11, flow_rate: 55, total: 294
-state: -**----*-**---*-DP-LY__12, flow_rate: 94, total: 388
-state: -**----*-**---*-EJ-YE__13, flow_rate: 94, total: 482
-state: -**-+--*-**---*-QK-YE__14, flow_rate: 94, total: 576
-state: -**-*+-*-**---*-DP-QK__15, flow_rate: 118, total: 694
-state: -**-**-*-**---*-CU-EJ__16, flow_rate: 133, total: 827
-state: -**-**-*-**---*-AO-QK__17, flow_rate: 133, total: 960
-state: -**-**-*-**---*-CE-OY__18, flow_rate: 133, total: 1093
-state: -**-**-*-**---*-AO-QK__19, flow_rate: 133, total: 1226
-state: -**-**-*-**---*-GD-OY__20, flow_rate: 133, total: 1359
-
-236.29418420791626
-
-Path to get there:
-state: ----------------AA-AA, flow_rate: 0, total: 0
-state: ----------------BZ-TL, flow_rate: 0, total: 0
-state: ----------------AI-KY, flow_rate: 0, total: 0
-state: --+-------------AI-CJ, flow_rate: 0, total: 0
-state: --*----+--------CJ-MM, flow_rate: 11, total: 11
-state: --*----*--------JW-RG, flow_rate: 21, total: 32
-state: --*----*--------KB-KS, flow_rate: 21, total: 53
-state: --*----*-+----+-KB-KS, flow_rate: 21, total: 74
-state: --*----*-*----*-GD-OY, flow_rate: 55, total: 129
-state: --*----*-*----*-AO-QK, flow_rate: 55, total: 184
-state: --*--+-*-*----*-CU-QK, flow_rate: 55, total: 239
-state: --*--*-*-*+---*-CU-EJ, flow_rate: 70, total: 309
-state: --*--*-*-**---*-DP-LY, flow_rate: 89, total: 398
-state: --*--*-*-**---*-IZ-YE, flow_rate: 89, total: 487
-state: -+*-+*-*-**---*-IZ-YE, flow_rate: 89, total: 576
-state: -**-**-*-**---*-DP-LY, flow_rate: 133, total: 709
-state: -**-**-*-**---*-CU-EJ, flow_rate: 133, total: 842
-state: -**-**-*-**---*-AO-QK, flow_rate: 133, total: 975
-state: -**-**-*-**---*-CE-OY, flow_rate: 133, total: 1108
-state: -**-**-*-**---*-IQ-KS, flow_rate: 133, total: 1241
-state: -**-**-*-**---*-CJ-RG, flow_rate: 133, total: 1374
-
-"""
-"""
 
 15 days
-
-### there is an error, because I could get 709 (see above)
 
 Path to get there:
 state: ----------------AA-AA__0, flow_rate: 0, total: 0
@@ -430,5 +374,39 @@ x2441	costs: 2441,2530	state: -**-**-*-**---*-DP-LY__15, flow_rate: 133, total: 
 x2518	costs: 2518,2592	state: -**-**-*-**---*-CU-EJ__16, flow_rate: 133, total: 842
 x2595	costs: 2595,2632	state: -**-**-*-**---*-AO-QK__17, flow_rate: 133, total: 975
 x2672	costs: 2672,2672	state: -**-**-*-**---*-OY-UK__18, flow_rate: 133, total: 1108
+
+
+26 minutes
+
+Path to get there:
+costs:    0,   0	state: ----------------AA-AA__0,  flow_rate:   0, total:    0
+costs:  210,1172	state: ----------------BZ-TL__1,  flow_rate:   0, total:    0
+costs:  420,1382	state: ----------------AI-KY__2,  flow_rate:   0, total:    0
+costs:  630,1592	state: --+-------------AI-CJ__3,  flow_rate:   0, total:    0
+costs:  829,1663	state: --*----+--------CJ-MM__4,  flow_rate:  11, total:   11
+costs: 1018,1746	state: --*----*--------JW-RG__5,  flow_rate:  21, total:   32
+costs: 1207,1935	state: --*----*--------KB-KS__6,  flow_rate:  21, total:   53
+costs: 1396,2124	state: --*----*-+----+-KB-KS__7,  flow_rate:  21, total:   74
+costs: 1551,2019	state: --*----*-*----*-OY-RA__8,  flow_rate:  55, total:  129
+costs: 1706,2174	state: --*----*-*----*-AO-XC__9,  flow_rate:  55, total:  184
+costs: 1861,2329	state: --*----*-*----*-CU-IZ__10, flow_rate:  55, total:  239
+costs: 2016,2484	state: -+*----*-*+---*-CU-IZ__11, flow_rate:  55, total:  294
+costs: 2132,2382	state: -**----*-**---*-DP-LY__12, flow_rate:  94, total:  388
+costs: 2248,2498	state: -**----*-**---*-EJ-YE__13, flow_rate:  94, total:  482
+costs: 2364,2614	state: -**-+--*-**---*-QK-YE__14, flow_rate:  94, total:  576
+costs: 2456,2622	state: -**-*+-*-**---*-DP-QK__15, flow_rate: 118, total:  694
+costs: 2533,2643	state: -**-**-*-**---*-CU-UK__16, flow_rate: 133, total:  827
+costs: 2610,2720	state: -**-**-*-**---*-AO-PB__17, flow_rate: 133, total:  960
+costs: 2687,2797	state: -**-**-*-**+--*-OY-PB__18, flow_rate: 133, total: 1093
+costs: 2759,2843	state: -**-**-*-***--*-GG-KS__19, flow_rate: 138, total: 1231
+costs: 2831,2915	state: -**-**-*-***--*-AI-OF__20, flow_rate: 138, total: 1369
+costs: 2903,2987	state: -**-**-*-***--*-CL-ZK__21, flow_rate: 138, total: 1507
+costs: 2975,3059	state: -**-**-*-***--*-GU-JN__22, flow_rate: 138, total: 1645
+costs: 3047,3121	state: -**+**-*-***--*-EK-GU__23, flow_rate: 138, total: 1783
+costs: 3105,3141	state: -*****+*-***--*-EK-VP__24, flow_rate: 152, total: 1935
+costs: 3141,3151	state: -*******-***--*-JN-MB__25, flow_rate: 174, total: 2109
+costs: 3177,3177	state: -*******+***--*-CL-MB__26, flow_rate: 174, total: 2283
+
+32251.475764274597
 
 """

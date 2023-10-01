@@ -32,8 +32,8 @@ class AStar:
     #
     #   pass in an object that has the following properties/methods
     #       key - a unique identifier for any object that we might encounter
-    #       children - (function) must return a list of children for this object
-    #       cost - the cost of moving to this object
+    #       children() must return a list of children for this object
+    #       edge_cost(self, from_obj) - the cost of moving to this object
     #       eta - (function) estimated time of arrival to the final node.  
     #             Note that if this returns zero, then this
     #             algorithm will behave like a simple dijkstra's algorithm
@@ -41,13 +41,16 @@ class AStar:
     #                 then finding the shortest possible path is not guaranteed
     #
     #   astar = Astar(some_obj)
-    #   final_node = astar.find_until(cb_function) # cb function returns true if final state is reached
+    #   final_node: Node = astar.find_until(cb_function)
+    #           cb function returns true if final state is reached
+    #           - it is passed the current object that is being investigated
     #   print(f"Final node id: {final_node.id}")
     #   print(f"Cost to get to final node: {final_node.cost}")
     #   print("Path to get there:")
     #   nodes = astar.get_path(final_node)
     #   for node in nodes:
     #       print(f"id: {node.id} cost: {node.cost}")
+    #       print(f"obj is: {node.obj}")
 
     # -------------------------------------------------------------------------
     # constructor
@@ -61,7 +64,7 @@ class AStar:
         self._current_node: Optional[Node] = None  # what node are we currently looking at?
 
         node = Node(start_obj, zero)
-        self.all_nodes[start_obj.key] = node
+        self.all_nodes[start_obj.key()] = node
         heapq.heappush(self.heap, PrioritizedItem(node.forecasted_cost, node))
         self.max_depth = None
 
@@ -97,8 +100,8 @@ class AStar:
                 for child_obj in current.obj.children():
 
                     # skip any node that has already been visited
-                    if child_obj.key in self.all_nodes:
-                        if self.all_nodes[child_obj.key].was_visited:
+                    if child_obj.key() in self.all_nodes:
+                        if self.all_nodes[child_obj.key()].was_visited:
                             continue
 
                     cost = current.cumulative_cost + child_obj.edge_cost(current)
