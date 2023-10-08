@@ -19,7 +19,6 @@ Each policy actually describes two positions in the password, where 1 means the 
 Exactly one of these positions must contain the given letter.
 Other occurrences of the letter are irrelevant for the purposes of policy enforcement.
 
-
 """
 
 def main(part: int = 1 ):
