@@ -1,4 +1,4 @@
-file = open("./day_1_input.txt")
+file = open("day1_input.txt")
 entries: list[int] = [number for number in map(int, map(str.rstrip, file))]
 entries.sort()
 j = len(entries) - 1

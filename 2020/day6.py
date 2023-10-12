@@ -38,11 +38,9 @@ def main(part: int = 1):
         total_answered += len(answers)
         total_everyone += len(everyone)
 
-
-
-
     print("Total number of answers is:", total_answered)
     print("Total number of everyone is:", total_everyone)
+
 
 def read_paragraph(file: TextIO) -> list[str]:
     lines: list[str] = list()
@@ -53,6 +51,7 @@ def read_paragraph(file: TextIO) -> list[str]:
             yield lines
             lines.clear()
     yield lines
+
 
 if __name__ == '__main__':
     main(1)
