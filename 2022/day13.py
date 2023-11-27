@@ -146,7 +146,8 @@ Packet data consists of lists and integers. Each list starts with [, ends with ]
 zero or more comma-separated values (either integers or other lists).
  Each packet is always a list and appears on its own line.
 
-When comparing two values, the first value is called left and the second value is called right. Then:
+When comparing two values, the first value is called left and the second value is called right. 
+Then:
 
 If both values are integers, the lower integer should come first. If the left integer is lower than the right integer, 
 the inputs are in the right order. If the left integer is higher than the right integer, 
