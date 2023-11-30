@@ -29,14 +29,62 @@ Once you work out which field is which, look for the six fields on your ticket t
 word departure. What do you get if you multiply those six values together?
 
 """
+from __future__ import annotations
+
+from typing import Optional
+
+
+class Ticket:
+    def __init__(self, values: list(int)):
+        self.values: list(int) = values
+        self.num_columns = len(self.values)
+        self.columns = range(self.num_columns)
+        self._valid_rules_per_column: list[set[str]] = [set() for _ in range(self.num_columns)]
+        self._updated_valid_rules_per_column: bool = False
+
+    def _determine_valid_rules_per_column(self, rules: list[Rule]):
+        self._updated_valid_rules_per_column = True
+        for column in self.columns:
+            for rule in rules:
+                if self.values[column] in rule.valid_values:
+                    self._valid_rules_per_column[column].add(rule.name)
+
+    def value_at_column(self,column):
+        return self.values[column]
+
+    def is_value_at_column_valid(self, column, rules) -> bool:
+        return len(self.valid_rules_for_column(column, rules)) != 0
+
+    def valid_rules_for_column(self, column, rules) -> set[str]:
+        if not self._updated_valid_rules_per_column:
+            self._determine_valid_rules_per_column(rules)
+        return self._valid_rules_per_column[column]
+
+    def is_valid(self, rules: list[Rule]) -> bool:
+        if not self._updated_valid_rules_per_column:
+            self._determine_valid_rules_per_column(rules)
+        for column in self.columns:
+            if len(self.valid_rules_for_column(column, rules)) == 0:
+                return False
+        return True
+
+
+class Rule:
+    def __init__(self, name: str, valid_values: set[int]):
+        self.name: str = name
+        self.valid_values = valid_values
 
 
 def main(part: int = 1):
     file = open("day16_input.txt", "r")
     parse_type = "rules"
-    rules: dict[str, set] = dict()
-    yours: list[int] = list()
-    others: list[list[int]] = list()
+    rules: list[Rule] = list()
+    yours: Optional[Ticket] = None
+    others: list[Ticket] = list()
+
+    # ------------------------------------------------------------------------
+    # parse the input
+    # ------------------------------------------------------------------------
     for line in map(str.rstrip, file):
         if line == "":
             continue
@@ -50,47 +98,65 @@ def main(part: int = 1):
         if parse_type == "rules":
             parse_rules(line, rules)
         elif parse_type == "yours":
-            parse_yours(line, yours)
+            yours: Ticket = parse_yours(line)
         else:
             parse_nearby(line, others)
 
-    # valid tickets and error_rate
-    valid_tickets = list()
+    # ------------------------------------------------------------------------
+    # error_rate
+    # ------------------------------------------------------------------------
     error_rate = 0
-    for ticket in others:
-        valid_ticket = True
-        for value in ticket:
-            valid_value = False
-            for rule in rules:
-                if value in rules[rule]:
-                    valid_value = True
-                    break
 
-            if not valid_value:
-                valid_ticket = False
-                error_rate += value
-        if valid_ticket:
-            valid_tickets.append(ticket)
+    for ticket in others:
+        for column in ticket.columns:
+            if not ticket.is_value_at_column_valid(column, rules):
+                error_rate += ticket.value_at_column(column)
 
     print("Part 1: error rate:", error_rate)
 
+    # ------------------------------------------------------------------------
     # determine the order of the ticket fields
+    # ------------------------------------------------------------------------
+    valid_tickets: list[Ticket] = [ticket for ticket in others if ticket.is_valid(rules)]
+    fields_by_column: list[set[str]] = [set([rule.name for rule in rules]) for _ in yours.columns]
+    for column in yours.columns:
+        for ticket in valid_tickets:
+            fields_by_column[column].intersection_update(ticket.valid_rules_for_column(column, rules))
+
+    # valid column to field is true if only one rule applies
+    done = False
+    found_fields = set()
+    while not done:
+        done = True
+        for column in yours.columns:
+            if len(fields_by_column[column]) <= 1:
+                found_fields.update(fields_by_column[column])
+            else:
+                done = False
+                fields_by_column[column] -= found_fields
+
+    ans = 1
+    for i, (field,) in enumerate(fields_by_column):
+        if field[0:9] == "departure":
+            ans = ans * yours.value_at_column(i)
+    print("part 2:", ans)
 
 
-def parse_rules(line, rules):
+def parse_rules(line:str, rules: list[Rule]):
     descr, rest = line.split(":")
     range1, range2 = rest.split(" or ")
     a1, a2 = map(int, range1.split("-"))
     b1, b2 = map(int, range2.split("-"))
-    rules[descr] = {*range(a1, a2 + 1), *range(b1, b2 + 1)}
+    rules.append(Rule(descr, {*range(a1, a2 + 1), *range(b1, b2 + 1)}))
 
 
-def parse_yours(line, yours):
-    yours.extend(list(map(int, line.split(","))))
+def parse_yours(line: str) -> Ticket:
+    return Ticket(list(map(int, line.split(","))))
 
 
-def parse_nearby(line, others):
-    others.append(list(map(int, line.split(","))))
+def parse_nearby(line: str, others: list[Ticket]):
+    ticket = Ticket(list(map(int, line.split(","))))
+    others.append(ticket)
 
 
 if __name__ == "__main__":
