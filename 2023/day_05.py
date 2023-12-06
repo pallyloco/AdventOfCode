@@ -115,9 +115,8 @@ def update_conversion_numbers(decoder: dict[Range, Range], source_ranges: list[R
             #        +++++++++          src
             # ****                      decoder_src
             # ------------------------------------------------------------------
-            #        +++++++++          new range
+            #        +++++++++          src remains unchanged
             # ------------------------------------------------------------------
-            #              ?            next src
             #              ?            next decoder_src
             # ------------------------------------------------------------------            #
             if start(src) > end(decoder_src):
