@@ -96,7 +96,6 @@ def update_conversion_numbers(decoder: dict[Range, Range], source_ranges: list[R
     # ------------------------------------------------------------------
     while len(source_ranges):
         src: Range = source_ranges.pop(0)
-        done = False
         while True:
 
             # ------------------------------------------------------------------
