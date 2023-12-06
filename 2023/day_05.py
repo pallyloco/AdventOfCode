@@ -97,7 +97,7 @@ def update_conversion_numbers(decoder: dict[Range, Range], source_ranges: list[R
     while len(source_ranges):
         src: Range = source_ranges.pop(0)
         done = False
-        while not done:
+        while True:
 
             # ------------------------------------------------------------------
             # ++++++++                  src
@@ -110,7 +110,6 @@ def update_conversion_numbers(decoder: dict[Range, Range], source_ranges: list[R
             # ------------------------------------------------------------------
             if decoder_src is None or end(src) < start(decoder_src):
                 new_decoder[src] = src
-                done = True
                 break
 
             # ------------------------------------------------------------------
@@ -155,7 +154,6 @@ def update_conversion_numbers(decoder: dict[Range, Range], source_ranges: list[R
                 decoder_dest = decoder[decoder_src]
                 dest_start = start(src) - start(decoder_src) + start(decoder_dest)
                 new_decoder[src] = make_range(dest_start, length(r=src))
-
                 break
 
             # ------------------------------------------------------------------
