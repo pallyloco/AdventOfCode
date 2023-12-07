@@ -24,8 +24,10 @@ def main():
 def num_puzzle_solutions(t: int, d: int) -> int:
     xl = (t - math.sqrt(t * t - 4 * d)) / 2
     xh = (t + math.sqrt(t * t - 4 * d)) / 2
-    xh = math.floor(xh) if math.floor(xh) != xh else xh - 1
-    xl = math.ceil(xl) if math.ceil(xl) != xl else xl + 1
+    xh = math.nextafter(xh, xl)
+    xl = math.nextafter(xl, xh)
+    xh = math.floor(xh)
+    xl = math.ceil(xl)
     return int(xh - xl + 1)
 
 
