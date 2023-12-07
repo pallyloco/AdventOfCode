@@ -3,8 +3,7 @@ from itertools import combinations
 from typing import Optional
 
 card_values: dict[str, int] = {"A": 13, "K": 12, "Q": 11, "J": 10, "T": 9, "9": 8, "8": 7, "7": 6, "6": 5, "5": 4,
-                               "4": 3,
-                               "3": 2, "2": 1}
+                               "4": 3, "3": 2, "2": 1}
 
 
 class Hand:
@@ -45,10 +44,6 @@ class Hand:
         c = sorted(self.cards)
         return c[0] == c[1] == c[2] and c[3] == c[4] or c[0] == c[1] and c[2] == c[3] == c[4]
 
-    def is_high_card(self) -> bool:
-        cards: str = self.cards
-        return cards[0] != cards[1] != cards[2] != cards[3] != cards[4] != cards[5]
-
     def __lt__(self, other: Hand) -> bool:
         rank1 = self._get_rank()
         rank2 = other._get_rank()
@@ -83,18 +78,6 @@ class Hand:
                 max_rank = max(max_rank, 2)
             max_rank = max(max_rank, 1)
         return max_rank
-
-    def _who_is_lower(self, other: Hand) -> Hand:
-        card1 = self.cards
-        card2 = other.cards
-        for c1, c2 in zip(card1, card2):
-            if c1 == c2:
-                continue
-            if card_values[c1] < card_values[c2]:
-                return self
-            else:
-                return other
-        return self
 
 
 def main(part: int = 1):
