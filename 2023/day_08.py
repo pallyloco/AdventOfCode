@@ -31,7 +31,7 @@ def main(part: int = 1):
     IT IS CYCLICAL
     xyA -> ijZ -> ijZ for all xy and ij
     
-    ijZ -> ijZ takes exactly one cycle of the directions, for all ij
+    ijZ -> ijZ takes exactly n*(cycle of the directions), for all ij
     
     xyA -> ijZ takes exactly n*(length of directions), for all xy
     
