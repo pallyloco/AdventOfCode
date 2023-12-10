@@ -3,50 +3,28 @@ def main(part: int = 1):
     ans1 = 0
     ans2 = 0
     for line in map(str.rstrip, file):
-        result = [list(map(int, line.split()))]
-        find_diff_last(result)
-        fr = find_diff_beginning(result)
+        data = list(map(int, line.split()))
+        result = find_diff(data)
 
         # add up all the end bits to get the last number
         for i in range(len(result) - 2, -1, -1):
+            minus = result[i + 1][0]
             add = result[i + 1][-1]
             result[i].append(add + result[i][-1])
+            result[i].insert(0, result[i][0] - minus)
         ans1 = ans1 + result[0][-1]
-
-        # add up all the beginning bits to get the first number
-        for i in range(len(result) - 2, -1, -1):
-            add = fr[i + 1][0]
-            fr[i].insert(0, -add + fr[i][0])
-
-        ans2 = ans2 + fr[0][0]
+        ans2 = ans2 + result[0][0]
     print("Part 1:", ans1)
     print("Part 2:", ans2)
 
 
-def find_diff_beginning(result: list[list[int]]) -> list[list[int]]:
-    len_r = len(result)
-    a = result[0][:len_r]
-    b = a[1:]
-    r: list[list[int]] = [a]
-    while len(b):
-        r.append([x - y for x, y in zip(b, a)])
-        a = r[-1]
-        b = a[1:]
-    return r
-
-
-def find_diff_last(result: list[list[int, int]]):
-    # get the difference of the last two numbers
-    diff = result[-1][-1] - result[-1][-2]
-    result.append([diff])
-    if result[-1][-1] == 0:
-        return
-
-    # cascade down the next set of differences from top to bottom of result list
-    len_r = len(result)
-    for i in range(1, len_r):
-        result[i].insert(0, result[i - 1][-(1 + len_r - i)] - result[i - 1][-(2 + len_r - i)])
-    find_diff_last(result)
+def find_diff(data: list[int, int], diffs=None):
+    if diffs is None:
+        diffs = list()
+    diffs.append(data)
+    if all((a == 0 for a in diffs[-1])):
+        return diffs
+    return find_diff([b - a for a, b in zip(data, data[1:])], diffs)
 
 
 if __name__ == "__main__":
