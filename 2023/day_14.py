@@ -6,26 +6,38 @@ from typing import Callable, Optional
 def main(part: int = 1):
     num_cycles = 1_000_000_000
     file = open("day_14_input.txt", 'r')
-    lines = list()
+    lines_p1 = list()
+    lines_p2 = list()
     for l in map(str.rstrip, file):
-        lines.append(l)
+        lines_p1.append(l)
+        lines_p2.append(l)
 
-    max_col = len(lines[0])
+    max_col = len(lines_p1[0])
     repeat = (roll_north, roll_west, roll_south, roll_east)
 
-    patterns, cycle, start = get_all_patterns(lines, repeat, num_cycles)
+    # ====================================================================
+    # part 1
+    # ====================================================================
+    roll_north(lines_p1, max_col)
+    line_str = "".join(lines_p1)
+    print("answer 1: ", calculate_answer_from_pattern(line_str, max_col))
+
+    # ====================================================================
+    # part 2
+    # ====================================================================
+    patterns, cycle, start = get_all_patterns(lines_p2, repeat, num_cycles)
     print("cycle info is: ", cycle, start)
 
-    index = (num_cycles - start) % cycle + (start-1)
+    index = (num_cycles - start) % cycle + (start - 1)
     print("calculated index is:", index)
 
     final = patterns[index]
     a = calculate_answer_from_pattern(final, max_col)
-    print (index, "answer 2:", a)
+    print(index, "answer 2:", a)
 
 
 def calculate_answer_from_pattern(p: str, max_col):
-    re_str = "."*max_col
+    re_str = "." * max_col
     lines = re.findall(re_str, p)
 
     lines.reverse()
@@ -58,12 +70,13 @@ def get_all_patterns(lines: list[str], repeat: tuple[Callable, ...], max_count: 
 
             for j, p in enumerate(patternl):
                 if p == line_str:
-                    print(i,j)
+                    print(i, j)
                     start_cycle = j
                     cycle = i - start_cycle
                     return patternl, cycle, start_cycle
 
     return patternl, cycle, start_cycle
+
 
 # 99380 answer too low
 # answer 2: 100064
@@ -151,7 +164,6 @@ def roll_east(lines, max_col, dir="e"):
 
 if __name__ == "__main__":
     main()
-
 
 """
 after 24 cycles
