@@ -48,7 +48,7 @@ class AStar:
     #           - it is passed the current object that is being investigated
     #
     #   print(f"Final node id: {final_node.id}")
-    #   print(f"Cost to get to final node: {final_node.cost}")
+    #   print(f"Cost to get to final node: {final_node.cumulative_cost}")
     #   print("Path to get there:")
     #   nodes = astar.get_path(final_node)
     #   for node in nodes:
@@ -86,8 +86,12 @@ class AStar:
         while current := self._find_lowest_cost_node():
             self.get_path_str(current)
             if self.print_intervals and not iterations % self.print_intervals:
-                print(iterations, current.cumulative_cost, current.forecasted_cost, current.obj.eta(),
-                      current.obj.key())
+                if current. prev is not None:
+                    print(iterations, current.cumulative_cost, current.forecasted_cost,
+                          current.obj.eta(), current.prev.obj, "=>", current.obj.key())
+                else:
+                    print(iterations, current.cumulative_cost, current.forecasted_cost,
+                          current.obj.eta(), "None=>", current.obj.key())
             iterations += 1
 
             # current node is visited

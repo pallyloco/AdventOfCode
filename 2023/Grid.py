@@ -60,6 +60,18 @@ class Grid:
     def east(self, data_point: DataPoint) -> Optional[DataPoint]:
         return self.get_data_point(data_point.row, data_point.col + 1)
 
+    def north_by_coords(self, row, col) -> Optional[DataPoint]:
+        return self.get_data_point(row - 1, col)
+
+    def south_by_coords(self, row, col) -> Optional[DataPoint]:
+        return self.get_data_point(row + 1, col)
+
+    def west_by_coords(self, row, col) -> Optional[DataPoint]:
+        return self.get_data_point(row, col - 1)
+
+    def east_by_coords(self, row, col) -> Optional[DataPoint]:
+        return self.get_data_point(row, col + 1)
+
     def north_east(self, data_point: DataPoint) -> Optional[DataPoint]:
         return self.get_data_point(data_point.row - 1, data_point.col + 1)
 
