@@ -1,9 +1,10 @@
 from __future__ import annotations
 from typing import Optional
 
-from Astar import CostProtocol, AStar, DijkstraObject, Cost, Node
+from Astar import CostProtocol, AStar, DijkstraObject, Cost, Node, NodeNotFoundError
 from Coords import Coord
 import re
+
 
 class CityBlock:
     def __init__(self, row, col, value=0):
@@ -58,11 +59,11 @@ class Crucible:
                     continue
 
                 # can't go in same directions for more than self.max_straight
-                if re.search(r"^(.)\1*$", new_body):
+                if self.max_straight and re.search(r"^(.)\1*$", new_body):
                     continue
 
                 # cannot turn unless we have gone is a straight direction for min_straight
-                if new_dir != self.body[0]:
+                if self.max_straight and new_dir != self.body[0]:
                     cost = 0
                     new_body = self.body
                     new_spot = self.head
@@ -74,7 +75,6 @@ class Crucible:
                         cost += int(self.city_blocks[new_spot.row][new_spot.col])
                     if not new_spot.between(Coord(0, 0), self.end_coord):
                         continue
-
 
                 valid.append((new_spot, new_body[:self.max_straight], cost))
         return valid
@@ -103,7 +103,12 @@ class Crucible:
         return str(self)
 
 
+# ========================================================================================
+# Main
+# ========================================================================================
 def main(part: int = 1):
+
+    # parse
     file = open("day_17_input.txt", 'r')
     city: Grid = list()
     for row, line in enumerate(map(str.rstrip, file)):
@@ -111,24 +116,28 @@ def main(part: int = 1):
     max_row = len(city) - 1
     max_col = len(city[0]) - 1
 
-    #(0,10)(>>>>>>>>>>)
-    t = Crucible(Coord(0,10),city,Coord(max_row,max_col),">>>>>>>>>>.")
-    t.children()
-
-
-    # use dijkstra
+    # part 1
+    # part 1
+    Crucible.max_straight = 4
+    Crucible.min_straight = 1
 
     start: Crucible = Crucible(Coord(0, 0), city, Coord(max_row, max_col))
-    astar = AStar(start, 0, 1000)
+    astar = AStar(start)
+    final_node: Node = astar.find_until(
+        lambda x: x.head == Coord(max_row, max_col), 1000)
+
+    print(f"Cost to get to final node: {final_node.cumulative_cost}")
+
+    # part 2
+    Crucible.max_straight = 11
+    Crucible.min_straight = 4
+
+    start: Crucible = Crucible(Coord(0, 0), city, Coord(max_row, max_col))
+    astar = AStar(start)
     final_node: Node = astar.find_until(
         lambda x: x.head == Coord(max_row, max_col))
 
-    print(f"Final node id: {final_node.id}")
     print(f"Cost to get to final node: {final_node.cumulative_cost}")
-    print("Path to get there:")
-    nodes = astar.get_path(final_node)
-    for node in nodes:
-        print(f"id: {node.id} cost: {node.obj.edge_cost()} cumulative: {node.cumulative_cost}")
 
 
 if __name__ == "__main__":

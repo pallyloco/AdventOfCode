@@ -1,9 +1,48 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 import heapq
+import itertools as it
 from typing import Protocol, TypeVar, Optional, Callable, Any
 
 
+# =====================================================================================
+# AStar/Dijkstra usage:
+#
+#   astar = Astar(dijkstra_obj: DijkstraObject)
+#   cb_function: Callable[ [DijkstraObject], bool]
+#
+# --- find costs from one node to all the rest
+#     astar.find_all()
+#     for node in astar.all_nodes.values():
+#         dijkstra_obj = node.obj
+#         print("Cost to ", dijkstra_obj, "is", node.cumulative_cost)
+#
+# --- stop when you get to a desired location
+#   final_node: Node = astar.find_until(cb_function)
+#           cb function returns true if final state is reached
+#
+#   print(f"Final node id: {final_node.id}")
+#   print(f"Cost to get to final node: {final_node.cumulative_cost}")
+#
+#   print("Path to get there:")
+#   nodes = astar.get_path(final_node)
+#   for node in nodes:
+#       print(f"id: {node.id} cost: {node.cost}")
+#       print(f"obj is: {node.obj}")
+# =====================================================================================
+
+
+# =====================================================================================
+# Requirements for using AStar or Dijkstra
+# =====================================================================================
+
+# ----------------------------------------------------------------------------------
+# The Cost type must have '__add__' and '__lt__'.
+#
+# If you are using integers, you don't
+# have to do anything, but if you are using an object as a cost, make sure you
+# implement this protocol
+# ----------------------------------------------------------------------------------
 class CostProtocol(Protocol):
     """What we need for 'costing' ASTAR compatible objects"""
 
@@ -37,30 +76,28 @@ class DijkstraObject(Protocol):
         """
 
 
-# ##############################################################################
-class AStar:
+# =====================================================================================
+# Dijkstra/AStar
+# =====================================================================================
+# -------------------------------------------------------------------------
+# print info to the screen
+# -------------------------------------------------------------------------
+def print_info(current: Node, iteration: int):
+    prev: str = str(current.prev.obj) if current.prev is not None else "None"
+    print(iteration, current.cumulative_cost, current.forecasted_cost,
+          current.obj.eta(), prev, "=>", current.obj.key())
 
-    # USAGE:
-    #
-    #   astar = Astar(dijkstra_obj)
-    #   final_node: Node = astar.find_until(cb_function)
-    #           cb function returns true if final state is reached
-    #           - it is passed the current object that is being investigated
-    #
-    #   print(f"Final node id: {final_node.id}")
-    #   print(f"Cost to get to final node: {final_node.cumulative_cost}")
-    #   print("Path to get there:")
-    #   nodes = astar.get_path(final_node)
-    #   for node in nodes:
-    #       print(f"id: {node.id} cost: {node.cost}")
-    #       print(f"obj is: {node.obj}")
+
+class AStar:
 
     # -------------------------------------------------------------------------
     # constructor
     # -------------------------------------------------------------------------
-    def __init__(self, start_obj: DijkstraObject, zero: Cost = 0, print_at_n_intervals: int = 10000):
+    def __init__(self,
+                 start_obj: DijkstraObject,
+                 zero: Cost = 0):
 
-        self.print_intervals = print_at_n_intervals
+        self.print_intervals: int = 0
         self.heap = list()
 
         self.all_nodes: dict[str, Node] = dict()
@@ -72,34 +109,37 @@ class AStar:
         self.max_depth = None
 
     # -------------------------------------------------------------------------
-    # cheating (getting rid of nodes that we will never visit)
+    # process
     # -------------------------------------------------------------------------
+    def find_all(self, print_every_nth_iteration: int = 0,
+                 what_to_print: Callable[[Node], None] = print_info):
+        return self.find_until(lambda _: False, print_every_nth_iteration, what_to_print)
 
-    # -------------------------------------------------------------------------
-    # find_until
-    # -------------------------------------------------------------------------
-    def find_until(self, cb_have_we_reached_desired_end: Callable[[DijkstraObject], bool]) \
+    def find_until(self,
+                   reached_desired_end: Callable[[DijkstraObject], bool],
+                   print_every_nth_iteration: int = 0,
+                   what_to_print: Callable[[Node], None] = print_info) \
             -> Optional[Node]:
-        iterations = 0
 
-        # set the current node to be the lowest cost neighbour
-        while current := self._find_lowest_cost_node():
-            self.get_path_str(current)
-            if self.print_intervals and not iterations % self.print_intervals:
-                if current. prev is not None:
-                    print(iterations, current.cumulative_cost, current.forecasted_cost,
-                          current.obj.eta(), current.prev.obj, "=>", current.obj.key())
-                else:
-                    print(iterations, current.cumulative_cost, current.forecasted_cost,
-                          current.obj.eta(), "None=>", current.obj.key())
-            iterations += 1
+        for iteration in it.count():
+
+            # set the current node to be the lowest cost neighbour, if no neighbours
+            # left, we are finished this process
+            try:
+                current = self._find_lowest_cost_node()
+            except NodeNotFoundError:
+                break
+
+            # print stuff to screen if requested
+            if print_every_nth_iteration and not iteration % print_every_nth_iteration:
+                self.print_intervals and what_to_print(current)
 
             # current node is visited
             current.was_visited = True
             self._current_node = current
 
             # are we are done?
-            if cb_have_we_reached_desired_end(current.obj):
+            if reached_desired_end(current.obj):
                 return self._current_node
 
             # get all new neighbours for this node
@@ -145,13 +185,10 @@ class AStar:
 
         return nodes
 
-    def get_path_str(self, node):
-        return node.path_least_visited
-
     # -------------------------------------------------------------------------
     # update node if exists, else create it
     # -------------------------------------------------------------------------
-    def _update_node(self, new_node:Node, prev_node: Node):
+    def _update_node(self, new_node: Node, prev_node: Node):
 
         updated_cost: Cost = new_node.cumulative_cost
 
@@ -175,9 +212,11 @@ class NodeNotFoundError(Exception):
     pass
 
 
-#########################################################################################
+# =====================================================================================
+# Node
+# =====================================================================================
 class Node:
-    __slots__ = ('obj', 'cumulative_cost', 'prev', 'id', 'forecasted_cost', 'was_visited', 'path_least_visited',
+    __slots__ = ('obj', 'cumulative_cost', 'prev', 'id', 'forecasted_cost', 'was_visited',
                  'time_least_visited')
 
     def __init__(self, obj, cumulative_cost=0, prev=None):
@@ -187,7 +226,6 @@ class Node:
         self.id: str = obj.key()
         self.forecasted_cost: Cost = self.cumulative_cost
         self.was_visited: bool = False
-        self.path_least_visited = ""
         self.time_least_visited = 0
 
     def __gt__(self, other):
