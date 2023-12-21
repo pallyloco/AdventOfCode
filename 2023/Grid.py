@@ -12,7 +12,7 @@ class DataPoint(Protocol):
 
 class Grid:
     """
-    A grid with no limits on the row number or column number.
+    A self with no limits on the row number or column number.
 
     Only saves data that is relevant
     """
@@ -94,11 +94,16 @@ class Grid:
         return (self.north(data_point),
                 self.east(data_point),
                 self.south(data_point),
-                self.west(data_point), )
+                self.west(data_point),)
 
     def get_row_values(self, row) -> tuple[DataPoint, ...]:
         return tuple(self.get_data_point(row, col)
                      for col in range(self.min_col(), self.max_col() + 1))
+
+    def get_valid_dps_from_row(self, row: int) -> list[DataPoint]:
+        l = [self._data[k] for k in self._data if Grid.row_from_key(k) == row]
+        l.sort(key=lambda x: x.col)
+        return l
 
     def get_rows(self) -> list[int]:
         return [Grid.row_from_key(key) for key in self._data]
@@ -127,6 +132,13 @@ class Grid:
 
     def num_cols(self) -> int:
         return self.max_col() - self.min_col() + 1
+
+    def inside_volume(self) -> int:
+        self.fill_in_water()
+        area = (self.max_row() - self.min_row() + 1) * (self.max_col() - self.min_col() + 1)
+        num_drops_water = len([v for v in self._data.values() if v.value == "~"])
+        return area - num_drops_water
+
 
     def __str__(self):
         result = ""
