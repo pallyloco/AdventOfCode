@@ -4,7 +4,7 @@ from typing import Protocol, Optional, Any, Generator
 
 
 # no limits on index numbers
-# dimension of grid depends on the number of coords in DataPoints
+# dimension of self depends on the number of coords in DataPoints
 
 class DataPoint(Protocol):
     coords: list[int]
@@ -13,7 +13,7 @@ class DataPoint(Protocol):
 
 class GridN:
     """
-    A grid with no limits on the indices.
+    A self with no limits on the indices.
 
     Only saves data that is relevant
     """
