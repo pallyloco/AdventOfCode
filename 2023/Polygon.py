@@ -1,5 +1,7 @@
 from Grid import Grid
 from Coords import Coord
+import itertools as it
+
 
 
 # ======================================================================================
@@ -11,6 +13,7 @@ class Polygon:
         self.points: list[Coord] = list()
         self.grid = Grid()
         self.wall_locations: list[Coord] = list()
+
 
     def add_inside_vertex(self, pt: Coord):
         self.grid.set_value(Coord(*pt.row_col(), "#"))
@@ -25,21 +28,27 @@ class Polygon:
         return self.points
 
     def outer_volume(self) -> int:
-        return self._volume(include_edges=True)
+        if self.wall_locations[0] == self.wall_locations[-1]:
+            self.wall_locations.append(self.wall_locations[0])
+        p = self.perimeter()
+        return self._volume(include_edges=True) + p//2 + 1
 
     def inner_volume(self) -> int:
-        return self._volume(include_edges=False)
+        if self.wall_locations[0] == self.wall_locations[-1]:
+            self.wall_locations.append(self.wall_locations[0])
+        p = self.perimeter()
+        return self._volume(include_edges=False) - p//2 + 1
+
+
+    def perimeter(self) -> int:
+        return sum(abs(a.row-b.row+a.col-b.col) for a,b in it.pairwise(self.wall_locations))
+
+
 
     def _volume(self, include_edges=True) -> int:
-        if include_edges:
-            v = self.outer_vertices()
-        else:
-            v = self.inner_vertices()
 
         total = 0
-        for index in range(len(v)):
-            p1 = v[index]
-            p2 = v[(index + 1) % len(v)]
+        for p1,p2 in it.pairwise(self.wall_locations):
             total += (p1.row + p2.row) * (p1.col - p2.col)
         return abs(total // 2)
 
