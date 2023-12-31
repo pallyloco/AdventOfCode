@@ -133,12 +133,11 @@ class Grid:
     def num_cols(self) -> int:
         return self.max_col() - self.min_col() + 1
 
-    def inside_volume(self) -> int:
-        self.fill_in_water()
-        area = (self.max_row() - self.min_row() + 1) * (self.max_col() - self.min_col() + 1)
-        num_drops_water = len([v for v in self._data.values() if v.value == "~"])
-        return area - num_drops_water
-
+    def copy(self)->Grid:
+        other = Grid()
+        for dp in self._data.values():
+            other.set_value(dp)
+        return other
 
     def __str__(self):
         result = ""

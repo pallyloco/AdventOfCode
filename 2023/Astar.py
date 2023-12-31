@@ -18,6 +18,9 @@ from typing import Protocol, TypeVar, Optional, Callable, Any
 #         print("Cost to ", dijkstra_obj, "is", node.cumulative_cost)
 #
 # --- stop when you get to a desired location
+#   def cb_function(dijkstra_obj) -> bool:
+#       pass
+#
 #   final_node: Node = astar.find_until(cb_function)
 #           cb function returns true if final state is reached
 #
@@ -106,13 +109,15 @@ class AStar:
         node = Node(start_obj, zero)
         self.all_nodes[start_obj.key()] = node
         heapq.heappush(self.heap, PrioritizedItem(node.forecasted_cost, node))
-        self.max_depth = None
+        self.max_cost = None
+        self.max_iterations = None
 
     # -------------------------------------------------------------------------
     # process
     # -------------------------------------------------------------------------
     def find_all(self, print_every_nth_iteration: int = 0,
                  what_to_print: Callable[[Node], None] = print_info):
+        self.print_intervals = print_every_nth_iteration
         return self.find_until(lambda _: False, print_every_nth_iteration, what_to_print)
 
     def find_until(self,
@@ -120,6 +125,7 @@ class AStar:
                    print_every_nth_iteration: int = 0,
                    what_to_print: Callable[[Node], None] = print_info) \
             -> Optional[Node]:
+        self.print_intervals = print_every_nth_iteration
 
         for iteration in it.count():
 
@@ -132,7 +138,7 @@ class AStar:
 
             # print stuff to screen if requested
             if print_every_nth_iteration and not iteration % print_every_nth_iteration:
-                self.print_intervals and what_to_print(current)
+                self.print_intervals and what_to_print(current, iteration)
 
             # current node is visited
             current.was_visited = True
@@ -143,7 +149,8 @@ class AStar:
                 return self._current_node
 
             # get all new neighbours for this node
-            if self.max_depth is None or current.time_least_visited < self.max_depth:
+            if (self.max_iterations is None or iteration < self.max_iterations) and \
+                    (self.max_cost is None or current.cumulative_cost < self.max_cost):
                 for child_obj in current.obj.children():
 
                     # skip any node that has already been visited
