@@ -19,6 +19,11 @@ class Grid:
 
     def __init__(self):
         self._data: dict[str, DataPoint] = dict()
+        self._row_max = None
+        self._row_min = None
+        self._col_max = None
+        self._col_min = None
+        self.null_char = "."
 
     @staticmethod
     def create_key(r: int, c: int) -> str:
@@ -42,8 +47,35 @@ class Grid:
     def data(self) -> list[DataPoint]:
         return self._data.values()
 
+    def clear(self):
+        self._data.clear()
+        self._row_max = 0
+        self._row_min = 0
+        self._col_max = 0
+        self._col_min = 0
+
     def set_value(self, data_point: DataPoint):
         self._data[Grid.key(data_point)] = data_point
+        if self._col_min is None:
+            self._col_min = data_point.col
+        else:
+            self._col_min = min(self._col_min, data_point.col)
+        if self._col_max is None:
+            self._col_max = data_point.col
+        else:
+            self._col_max = max(self._col_max, data_point.col)
+
+        if self._row_min is None:
+            self._row_min = data_point.row
+        else:
+            self._row_min = min(self._row_min, data_point.row)
+        if self._row_max is None:
+            self._row_max = data_point.row
+        else:
+            self._row_max = max(self._row_max, data_point.row)
+
+    def remove_data_point(self, r, c):
+        self._data.pop(Grid.create_key(r, c), None)
 
     def get_data_point(self, r, c) -> Optional[DataPoint]:
         return self._data.get(Grid.create_key(r, c), None)
@@ -109,10 +141,10 @@ class Grid:
         return [Grid.row_from_key(key) for key in self._data]
 
     def min_row(self) -> int:
-        return min(self.get_rows())
+        return self._row_min
 
     def max_row(self) -> int:
-        return max(self.get_rows())
+        return self._row_max
 
     def num_rows(self) -> int:
         return self.max_row() - self.min_row() + 1
@@ -125,10 +157,10 @@ class Grid:
         return tuple(Grid.col_from_key(key) for key in self._data)
 
     def min_col(self) -> int:
-        return min(self.get_cols())
+        return self._col_min
 
     def max_col(self) -> int:
-        return max(self.get_cols())
+        return self._col_max
 
     def num_cols(self) -> int:
         return self.max_col() - self.min_col() + 1
@@ -145,7 +177,7 @@ class Grid:
             for c in range(self.min_col(), self.max_col() + 1):
                 dp = self.get_data_point(r, c)
                 if dp is None:
-                    result += "."
+                    result += self.null_char
                 else:
                     result += str(dp.value)[0]
             result += "\n"

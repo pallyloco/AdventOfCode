@@ -47,6 +47,11 @@ class Coord:
     def __add__(self, other) -> Coord:
         return Coord(self.row + other.row, self.col + other.col, self.value)
 
+    def __lt__(self, other):
+        if self.row == other.row:
+            return self.col < other.col
+        return self.row < other.row
+
     def __str__(self):
         return f"({self.row},{self.col}):{self.value}"
 
