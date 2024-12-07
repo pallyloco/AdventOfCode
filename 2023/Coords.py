@@ -17,6 +17,7 @@ class Coord:
         return new.dir()
 
     def dir(self):
+
         nr = 0
         if self.row < 0:
             nr = -1

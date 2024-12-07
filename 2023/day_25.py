@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import itertools
 
 # ==========================================================================
@@ -6,10 +7,10 @@ import itertools
 # ==========================================================================
 edges: dict[str, Edge] = {}
 all_nodes: dict[str, Node] = {}
-k = 0.3         # spring constant
-N = 0           # natural length of the spring
-g = -10         # gravitational pull
-ROUNDING = 1    # precision required for y coordinate
+k = 0.3  # spring constant
+N = 0  # natural length of the spring
+g = -10  # gravitational pull
+ROUNDING = 1  # precision required for y coordinate
 
 
 # ==========================================================================
@@ -71,6 +72,7 @@ class Node:
         f = self.forces()
         self.y = self.y + f
 
+
 # ==========================================================================
 # Get a list of unique y positions of all nodes
 # ==========================================================================
@@ -78,18 +80,18 @@ def get_all_ys() -> list[int]:
     ys = set()
     for node in all_nodes.values():
         ys.add(round(node.y, ROUNDING))
-    return list(sorted(ys, reverse=True))
+    return sorted(ys, reverse=True)
 
 
 # ==========================================================================
 # Find a y position and edges, where only 3 edges cross the y value
 # ==========================================================================
-def find_snip_points()->tuple[float,list[Edge]]:
+def find_snip_points() -> tuple[float, list[Edge]]:
     for y in get_all_ys():
         e = [e for e in edges.values() if e.crosses_over(y)]
         if len(e) == 3:
-            return y,e
-    return 0,[]
+            return y, e
+    return 0, []
 
 
 # ==========================================================================
@@ -159,16 +161,14 @@ def main():
         LINES: list[str] = list(map(str.rstrip, file.readlines()))
     decipher_inputs(LINES)
 
-    while True:
-        x = adjust()
-        if x / len(all_nodes) < 0.5:
-            break
+    while adjust() / len(all_nodes) >= 0.5:
+        pass
 
     y, e = find_snip_points()
 
     total_nodes = len(all_nodes)
-    top_nodes = [n for n in all_nodes.values() if round(n.y,ROUNDING) <= y]
-    answer = len(top_nodes)*(total_nodes-len(top_nodes))
+    top_nodes = [n for n in all_nodes.values() if round(n.y, ROUNDING) <= y]
+    answer = len(top_nodes) * (total_nodes - len(top_nodes))
     print(answer)
 
 
