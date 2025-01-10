@@ -1,7 +1,7 @@
 from __future__ import annotations
 from enum import Enum
 
-from typing import Any, Optional
+from typing import Any, Optional, Self
 
 
 class Direction(Enum):
@@ -13,23 +13,51 @@ class Direction(Enum):
     NORTH_EAST = (-1, 1)
     SOUTH_WEST = (1, -1)
     SOUTH_EAST = (1, 1)
+    NONE = (0, 0)
+
+    def left(self):
+        if self == Direction.NORTH:
+            return Direction.WEST
+        if self == Direction.SOUTH:
+            return Direction.EAST
+        if self == Direction.WEST:
+            return Direction.SOUTH
+        if self == Direction.EAST:
+            return Direction.NORTH
+
+    def opposite(self):
+        if self == Direction.NORTH:
+            return Direction.SOUTH
+        if self == Direction.SOUTH:
+            return Direction.NORTH
+        if self == Direction.WEST:
+            return Direction.EAST
+        if self == Direction.EAST:
+            return Direction.WEST
 
     def __str__(self):
-        return str(self.value)
+        return str(self.name)
 
 
 class Coord:
-    def __init__(self, row, col, value: Any = None):
+    def __init__(self, row, col, value: Any = None, *, direction=Direction.NORTH):
         self.row: int = row
         self.col: int = col
         self.value = value
-        self.direction = Direction.NORTH
+        self.direction = direction
 
-    def move(self, amount: int, direction: Optional[Direction] = None):
+    def copy(self):
+        return type(self)(self.row, self.col, self.value, direction=self.direction)
+
+    def move(self, amount: int=1, direction: Optional[Direction] = None):
         if direction is None:
             direction = self.direction
-        self.row = self.row + direction.value[0]
-        self.col = self.col + direction.value[1]
+        for _ in range(amount):
+            self.row = self.row + direction.value[0]
+            self.col = self.col + direction.value[1]
+
+    def manhatten_distance(self,other):
+        return abs(self.row - other.row) + abs(self.col - other.col)
 
     def rotate_45_clockwise(self):
         if self.direction == Direction.NORTH:
@@ -58,6 +86,10 @@ class Coord:
         self.rotate_90_clockwise()
         self.rotate_90_clockwise()
 
+    def reverse_direction(self):
+        self.rotate_90_clockwise()
+        self.rotate_90_clockwise()
+
     def direction_to(self, other) -> Direction:
         new: Coord = other - self
         if new.row < 0 and new.col == 0:
@@ -79,6 +111,22 @@ class Coord:
 
     def row_col(self) -> tuple[int, int]:
         return self.row, self.col
+
+
+
+    def ordinal_neighbours(self) -> tuple[Self, Self, Self, Self]:
+        n1 = self.copy()
+        n2 = self.copy()
+        n3 = self.copy()
+        n4 = self.copy()
+        n1.move(1)
+        n2.rotate_90_clockwise()
+        n2.move(1)
+        n3.reverse_direction()
+        n3.move()
+        n4.rotate_90_counter_clockwise()
+        n4.move()
+        return n1, n2, n3, n4
 
     def between(self, cmin: Coord, cmax: Coord) -> bool:
         """are you in between two coordinates"""
@@ -103,7 +151,16 @@ class Coord:
         return self.row < other.row
 
     def __str__(self):
-        return f"({self.row},{self.col}):{self.value}"
+        s = f"({self.row},{self.col}):{self.value}"
+        if self.direction == Direction.NORTH:
+            s += " ^ "
+        elif self.direction == Direction.SOUTH:
+            s += " v "
+        elif self.direction == Direction.WEST:
+            s += " < "
+        elif self.direction == Direction.EAST:
+            s += " > "
+        return s
 
     def __repr__(self):
         return str(self)

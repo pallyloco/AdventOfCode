@@ -1,7 +1,7 @@
 from typing import Optional
 
 from grid import Grid
-from coords import Coord
+from coord import Coord
 
 data = [
     "....#.....",
@@ -15,7 +15,6 @@ data = [
     "#.........",
     "......#...",
 ]
-
 
 
 def main():
