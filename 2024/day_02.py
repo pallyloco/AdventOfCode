@@ -1,14 +1,10 @@
-"""
-7 6 4 2 1
-1 2 7 8 9
-9 7 6 2 1
-1 3 2 4 5
-8 6 4 4 1
-1 3 6 7 9
-"""
 from typing import Iterable
 
-datas = [
+"""
+The  data consists of many reports, one report per line. Each report is a 
+list of numbers called levels that are separated by spaces.
+"""
+input_data = [
     [7, 6, 4, 2, 1],
     [1, 2, 7, 8, 9],
     [9, 7, 6, 2, 1],
@@ -17,16 +13,14 @@ datas = [
     [1, 3, 6, 7, 9],
 ]
 
+fh = open("day_02.txt", "r")
+input_data = [(list(map(int, line.split()))) for line in fh]
 
-def main(test_flag=True):
+
+def main(data):
     bad = []
-    if test_flag:
-        ds = datas
-    else:
-        fh = open("day_02.txt", "r")
-        ds:list[list[int]] = [ (list(map(int,line.split())))  for line in fh]
     total = 0
-    for d in ds:
+    for d in data:
         if is_good(d):
             total = total + 1
         else:
@@ -35,9 +29,13 @@ def main(test_flag=True):
     print(total)
 
     # part 2 , really inefficient
+    """
+    Now, the same rules apply as before, except if removing a single level from an unsafe report 
+    would make it safe, the report instead counts as safe.
+    """
     for d in bad:
         for i in range(len(d)):
-            t = d[:i] + d[i+1:]
+            t = d[:i] + d[i + 1:]
             if is_good(t):
                 total = total + 1
                 break
@@ -56,4 +54,4 @@ def is_good(data: Iterable) -> bool:
 
 
 if __name__ == "__main__":
-    main(False)
+    main(input_data)

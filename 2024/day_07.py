@@ -1,6 +1,11 @@
-import itertools as it
+"""
+Each line represents a single equation. The test value appears before the colon on each line;
+it is your job to determine whether the remaining numbers can be combined with operators to
+produce the test value.
 
-data = [
+"""
+
+input_data = [
     "190: 10 19",
     "3267: 81 40 27",
     "83: 17 5",
@@ -12,11 +17,11 @@ data = [
     "292: 11 6 16 20",
 ]
 
+fh = open("day_07.txt", "r")
+input_data = list(map(str.rstrip, fh))
 
-def main():
-    # part 1
-    fh = open("day_07.txt", "r")
-    data = list(map(str.rstrip,fh))
+
+def main(data):
     num_valid = 0
     for line in data:
         num_valid = num_valid + is_valid(line)
@@ -26,7 +31,7 @@ def main():
 def is_valid(line: str) -> int:
     result, rest = line.split(":")
     nums = rest.split()
-    return int(result) if recursive_calc(int(result),list(map(int,nums))) else 0
+    return int(result) if recursive_calc(int(result),list(map(int, nums))) else 0
 
 
 def recursive_calc(wanted, nums) -> bool:
@@ -46,4 +51,4 @@ def recursive_calc(wanted, nums) -> bool:
 
 
 
-main()
+main(input_data)

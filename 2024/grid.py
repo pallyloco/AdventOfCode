@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, Any, Iterator, Generator
 from coord import Coord, Direction
 
 
@@ -10,13 +10,15 @@ class Grid:
     Only saves data that is relevant
     """
 
-    def __init__(self):
+    def __init__(self, data=None, null_char="."):
         self._data: dict[str, Coord] = dict()
         self._row_max = None
         self._row_min = None
         self._col_max = None
         self._col_min = None
-        self.null_char = "."
+        self.null_char = null_char
+        if data is not None:
+            self.read_data(data)
 
     @staticmethod
     def create_key(r: int, c: int) -> str:
@@ -43,6 +45,17 @@ class Grid:
     @property
     def area(self) -> int:
         return len(self._data.values())
+
+    def read_data(self, data: list[list[str]]):
+        """read map from a list of strings"""
+        for row, line in enumerate(data):
+            for col, char in enumerate(line):
+                if char != self.null_char:
+                    self.set_value(Coord(row, col, char))
+
+    def get_coordinates_with_value(self,value:Any) -> Generator[Coord, Any, None]:
+        """return all coordinate objects that have the specified value"""
+        return (coord for coord in self.data if coord.value == value)
 
     def number_of_sides(self) -> int:
         """number of sides this region has (vertical/horizontal) inside and outside"""
@@ -208,24 +221,23 @@ class Grid:
     def max_row(self) -> int:
         return self._row_max
 
-    def set_max_row(self, num:int):
+    def set_max_row(self, num: int):
         self._row_max = num
 
-    def set_min_row(self, num:int):
+    def set_min_row(self, num: int):
         self._row_min = num
 
-    def set_max_col(self, num:int):
+    def set_max_col(self, num: int):
         self._col_max = num
 
-    def set_min_col(self, num:int):
+    def set_min_col(self, num: int):
         self._col_min = num
 
-    def set_boundaries(self,row_min, row_max, col_min, col_max):
+    def set_boundaries(self, row_min, row_max, col_min, col_max):
         self.set_max_row(row_max)
         self.set_min_row(row_min)
         self.set_max_col(col_max)
         self.set_min_col(col_min)
-
 
     def num_rows(self) -> int:
         return self.max_row() - self.min_row() + 1

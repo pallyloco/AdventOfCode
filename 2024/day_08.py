@@ -1,10 +1,25 @@
 import math
 
-from grid import Grid
 from coord import Coord
 import itertools as it
 
-data = [
+
+"""
+PART 1
+In particular, an antinode occurs at any point that is perfectly in line with two antennas 
+of the same frequency - but only when one of the antennas is twice as far away as the other.
+
+This means that for any pair of antennas with the same frequency, there are two antinodes, 
+one on either side of them.
+
+PART 2
+After updating your model, it turns out that an antinode occurs at any grid position exactly 
+in line with at least two antennas of the same frequency, regardless of distance. 
+This means that some of the new antinodes will occur at the position of each antenna
+
+"""
+
+input_data = [
     "............",
     "........0...",
     ".....0......",
@@ -22,17 +37,18 @@ data = [
 MAX_ROW = 9
 MAX_COL = 9
 
+fh = open("day_08.txt", "r")
+input_data = list(map(str.rstrip, fh))
 
-def main():
-    # part 1
-    fh = open("day_08.txt", "r")
-    data = list(map(str.rstrip, fh))
+
+def main(data):
     antennas = read_antennas(data)
 
     node_points: set[tuple[int, int]] = set()
     part_2_nodes: set[tuple[int, int]] = set()
-    grouped_antennas: dict[str, list[Coord]] = {b.value: [] for b in antennas}
-    for antenna_type in grouped_antennas:
+    grouped_antennas: dict[str, list[Coord]] = dict()
+
+    for antenna_type in set((a.value for a in antennas)):
         grouped_antennas[antenna_type] = [a for a in antennas if a.value == antenna_type]
         find_nodes(grouped_antennas[antenna_type], node_points)
         find_nodes_2(grouped_antennas[antenna_type], part_2_nodes)
@@ -41,16 +57,14 @@ def main():
 
 
 def find_nodes(antennas: list[Coord], node_points: set[tuple[int, int]]):
+    # part 1
+    # How many unique locations within the bounds of the map contain an antinode?
+
     for a, b in it.combinations(antennas, 2):
         pts: list[tuple[int, int]] = [
             (2 * b.row - a.row, 2 * b.col - a.col),
             (2 * a.row - b.row, 2 * a.col - b.col),
         ]
-        if (a.row - b.row) % 3 == 0 and (a.col - b.col) % 3 == 0:
-            d_row = int((b.row - a.row) / 3)
-            d_col = int((b.col - a.col) / 3)
-            pts.append((a.row + 2 * d_row, a.col + 2 * d_col))
-            pts.append((a.row + d_row, a.col + d_col))
 
         for r, c in pts:
             if 0 <= r <= MAX_ROW and 0 <= c <= MAX_COL:
@@ -58,6 +72,8 @@ def find_nodes(antennas: list[Coord], node_points: set[tuple[int, int]]):
 
 
 def find_nodes_2(antennas: list[Coord], node_points: set[tuple[int, int]]):
+    # part 2
+    # How many unique locations within the bounds of the map contain an antinode?
     for a, b in it.combinations(antennas, 2):
         gcd = math.gcd(abs(b.row - a.row), abs(b.col - a.col))
         d_row = int((b.row - a.row) / gcd)
@@ -91,5 +107,4 @@ def read_antennas(inputs) -> list[Coord]:
     return antennas
 
 
-main()
-#find_nodes_2([Coord(0,0),Coord(1,3),Coord(2,1)],set())
+main(input_data)

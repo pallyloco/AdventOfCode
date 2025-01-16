@@ -1,6 +1,17 @@
 from typing import Optional
+from reading import read_paragraphs
+from dictionaries import DictSet
 
-test_data = [
+"""
+Safety protocols clearly indicate that new pages for the safety manuals must be printed in a 
+very specific order. The notation X|Y means that if both page number X and page number Y 
+are to be produced as part of an update, page number X must be printed at some point before page number Y.
+
+part 1
+To get the printers going as soon as possible, start by identifying which updates are already 
+in the right order.
+"""
+input_data = [
     "47|53",
     "97|13",
     "97|61",
@@ -31,19 +42,19 @@ test_data = [
     "97,13,75,29,47",
 ]
 
+fh = open("day_05.txt", "r")
+input_data = [line.rstrip() for line in fh]
 
-def main():
-    fh = open("day_05.txt", "r")
-    rules, updates = get_rules_and_updates(map(str.rstrip, fh))
-    #rules, updates = get_rules_and_updates(test_data)
-    rule_dict = {}
-    for a, _ in (r.split("|") for r in rules):
-        rule_dict[a] = set()
+
+def main(data):
+    rules, updates = read_paragraphs(data)
+    rule_dict = DictSet()
     for a, b in (r.split("|") for r in rules):
         rule_dict[a].add(b)
 
     valid_updates = []
     invalid_updates = []
+
     for pages in (u.split(",") for u in updates):
         valid = True
         for p in (page for page in pages if page in rule_dict):
@@ -54,56 +65,44 @@ def main():
             invalid_updates.append(pages)
 
     # part 1
+    # What do you get if you add up the middle page number from those correctly-ordered updates
     total = 0
-    for vu in valid_updates:
-        total = total + int(vu[len(vu) // 2])
+    for valid_update in valid_updates:
+        total = total + int(valid_update[len(valid_update) // 2])
     print(total)
 
     # part 2
+    # Find the updates which are not in the correct order. What do you get if you add up the
+    # middle page numbers after correctly ordering just those updates?
     updated = []
     for pages in invalid_updates:
-        updated.append(re_order(pages,rule_dict))
+        updated.append(re_order(pages, rule_dict))
     total = 0
-    for vu in updated:
-        total = total + int(vu[len(vu) // 2])
+    for valid_update in updated:
+        total = total + int(valid_update[len(valid_update) // 2])
     print(total)
 
-def re_order(pages, rule_dict)->list:
+
+def re_order(pages, rule_dict) -> list:
+    """take pages and correct the ordering as defined by rule_dict"""
     result = []
     while len(pages) > 0:
-        # find page that does not have any rule associated with it
-        i = find_page_no_rule(pages,rule_dict)
-        p = pages.pop(i)
-        result.append(p)
+        index = find_page_no_rule(pages, rule_dict)
+        page = pages.pop(index)
+        result.append(page)
     result.reverse()
     return result
 
 
-def find_page_no_rule(pages,rule_dict)->Optional[int]:
-    for i,page in enumerate(pages):
+def find_page_no_rule(pages, rule_dict) -> Optional[int]:
+    """find a page such that it does not have to be before any other page in pages"""
+    for index, page in enumerate(pages):
         if page not in rule_dict:
-            return i
+            return index
         needed = any(a in pages for a in rule_dict[page])
         if not needed:
-            return i
+            return index
     return None
 
 
-
-
-def get_rules_and_updates(data) -> tuple[list[str], list[str]]:
-    rules = []
-    updates = []
-    update_flag = False
-    for rule in data:
-        if rule == "":
-            update_flag = True
-            continue
-        if update_flag:
-            updates.append(rule)
-        else:
-            rules.append(rule)
-    return rules, updates
-
-
-main()
+main(input_data)
