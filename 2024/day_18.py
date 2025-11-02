@@ -39,9 +39,6 @@ fh = open("day_18.txt", "r")
 input_data = list(map(str.rstrip, fh))
 
 class You(Coord):
-    @staticmethod
-    def copy(r: You):
-        return You(r.grid, r.row, r.col, r.value, direction=r.direction)
 
     def __init__(self, size: int, grid: Grid, row: int, col: int, value: Any = None, *, direction=Direction.NORTH):
         super().__init__(row, col, value, direction=direction)
@@ -78,6 +75,11 @@ def main(data, max_bytes, size):
         col, row = list(map(int, line.split(",")))
         byte_grid.set_value(Coord(row, col, "#"))
 
+        if num_bytes == max_bytes:
+            astar = AStar(You(size,byte_grid,0,0))
+            final_node: Node = astar.find_until(cb_function)
+            print(f"{num_bytes:5d} Cost to get to final node: {final_node.cumulative_cost}")
+
         if num_bytes > max_bytes:
 
             astar = AStar(You(size,byte_grid,0,0))
@@ -86,6 +88,5 @@ def main(data, max_bytes, size):
                 print(f"{col},{row}")
                 break
 
-            print(f"{num_bytes:5d} Cost to get to final node: {final_node.cumulative_cost}")
 
 main(input_data,1024,70)

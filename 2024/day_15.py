@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from time import sleep
 
-from grid import Grid
+from grid import Grid, TkGrid
 from coord import Coord, Direction
 from reading import read_paragraphs
 
@@ -59,19 +59,19 @@ def main(data):
     direction_symbols = {"^": Direction.NORTH, "<": Direction.WEST, "v": Direction.SOUTH, ">": Direction.EAST}
     movements = "".join(movement_data)
     for i, movement in enumerate(movements):
-        print()
-        print(movement)
+        #print()
+        #print(movement)
         robot2.value = movement
         robot.direction = direction_symbols[movement]
         move(robot, warehouse)
         robot2.direction = direction_symbols[movement]
         move2(robot2, warehouse2)
-        print(warehouse2)
+        #print(warehouse2)
         # robot.direction = direction_symbols[movement]
         # move2(robot, warehouse)
         # print(warehouse)
     #print(warehouse)
-    print(warehouse2)
+    #print(warehouse2)
     gps_sum = 0
     gps_sum2 = 0
     for cell in warehouse.data:
@@ -196,8 +196,8 @@ def can_move_box(box, direction, warehouse) -> bool:
 
 
 def read_map(data) -> tuple[Grid, Grid, Coord, Coord]:
-    warehouse = Grid()
-    warehouse2 = Grid()
+    warehouse = TkGrid(0,50,0,50)
+    warehouse2 = TkGrid(0,100,0,100)
     robot = Coord(0, 0)
     robot2 = Coord(0, 0)
     for row, line in enumerate(data):
@@ -218,3 +218,4 @@ def read_map(data) -> tuple[Grid, Grid, Coord, Coord]:
 
 
 main(input_data)
+input("all done")

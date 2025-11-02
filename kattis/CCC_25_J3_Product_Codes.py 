@@ -1,0 +1,6 @@
+import re
+for _ in range(int(input())):
+    product_code = input()
+    caps =  "".join(c for c in product_code if c.isupper())
+    total = sum(int(n) for n in re.findall(r"-?\d+",product_code))
+    print(caps + str(total))

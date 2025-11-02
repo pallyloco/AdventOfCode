@@ -25,6 +25,17 @@ input_data = [
     "",
     "Program: 2,4,1,3,7,5,1,5,0,3,4,2,5,5,3,0",
 ]
+"""
+start:
+    bst 4  # B = A % 8       (2,4)
+    bxl 3  # B = B ^ 3       (1,3)
+    cdv 5  # C = A // (2^B)  (7,5)
+    bxl 5  # B = B ^ 5       (1,5)
+    adv 3  # A = A // (2^3)  (0,3)
+    bxc 2  # B = C ^ B       (4,2)
+    out 5  # print(B%8)      (5,5)
+    jnz 0  # jump start if A != 0 (3,0) 
+"""
 
 
 def main(data):

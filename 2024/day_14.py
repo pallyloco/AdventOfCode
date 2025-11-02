@@ -1,12 +1,17 @@
 import re
 from dataclasses import dataclass
+from functools import partial
+from time import sleep
 
 from grid import Grid
 from coord import Coord
+import tkinter as tk
 
 # 11 tiles wide and 7 tiles tall
 WIDTH = 101
 HEIGHT = 103
+#WIDTH=11
+#HEIGHT = 7
 
 input_data = [
     "p=0,4 v=3,-3",
@@ -52,19 +57,20 @@ def main(data):
         px, py, vx, vy = list(map(int, match.groups()))
         guards.append(Guard(px, py, vx, vy))
 
-    for i in range(10000):
+    for i in range(7000):
         area = Grid()
         center_num = 0
         for guard in guards:
             area.set_value(Coord(guard.py, guard.px))
             if int(WIDTH/2) - 10 < guard.px < int(WIDTH/2) + 10 and int(HEIGHT/2) - 10 < guard.py < int(HEIGHT/2) + 10:
                 center_num += 1
-        if 6510 < i < 6520:
-            print(i, center_num)
-            print(area)
-
+        print(i, center_num)
         for guard in guards:
             guard.move()
+
+        if 6510 < i < 6520 or i < 5:
+            #print(area)
+            pass
 
     region1 = 0
     region2 = 0
@@ -85,4 +91,40 @@ def main(data):
 
 
 main(input_data)
+size=5
+"""gonna try pygame or tkinter to watch the movement"""
+def tk_setup(data):
+    mw = tk.Tk()
+    canvas = tk.Canvas(mw,height=HEIGHT*size+size, width=WIDTH*size+size)
+    canvas.pack()
+    guards = []
+    for line in data:
+        match = re.match(r".*?=(-?\d+),(-?\d+) .*?=(-?\d+),(-?\d+)", line)
+        px, py, vx, vy = list(map(int, match.groups()))
+        guards.append(Guard(px, py, vx, vy))
 
+    tk_guards = []
+    for guard in guards:
+        tk_guards.append(canvas.create_oval(guard.px*size, guard.py*size, guard.px*size+size, guard.py*size+size, fill="green"))
+    mw.after(5000, partial(tkinter_watch, canvas, tk_guards, guards))
+    #a=input("Continue")
+    mw.mainloop()
+
+def tkinter_watch(canvas:tk.Canvas, tk_guards, guards):
+    for i in range(10000):
+        print(i+1)
+        for tk_guard, guard in zip(tk_guards,guards):
+            x,y=(guard.px, guard.py)
+            guard.move()
+            canvas.move(tk_guard,(guard.px-x)*size,(guard.py-y)*size)
+        #sleep(0.01)
+        if 6510 < i < 6520:
+            sleep(0.5)
+        canvas.winfo_toplevel().update()
+        if i == 6515:
+            break
+
+
+
+    pass
+#tk_setup(input_data)

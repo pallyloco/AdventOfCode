@@ -5,6 +5,7 @@ from typing import Any, Optional, Self
 
 
 class Direction(Enum):
+    """tuple representing direction"""
     NORTH = (-1, 0)
     SOUTH = (1, 0)
     EAST = (0, 1)
@@ -15,7 +16,7 @@ class Direction(Enum):
     SOUTH_EAST = (1, 1)
     NONE = (0, 0)
 
-    def left(self):
+    def left(self) -> Direction:
         if self == Direction.NORTH:
             return Direction.WEST
         if self == Direction.SOUTH:
@@ -24,8 +25,9 @@ class Direction(Enum):
             return Direction.SOUTH
         if self == Direction.EAST:
             return Direction.NORTH
+        return Direction.NORTH
 
-    def opposite(self):
+    def opposite(self)-> Direction:
         if self == Direction.NORTH:
             return Direction.SOUTH
         if self == Direction.SOUTH:
@@ -34,13 +36,15 @@ class Direction(Enum):
             return Direction.EAST
         if self == Direction.EAST:
             return Direction.WEST
+        return Direction.NORTH
 
     def __str__(self):
         return str(self.name)
 
 
 class Coord:
-    def __init__(self, row, col, value: Any = None, *, direction=Direction.NORTH):
+    """a 2d point with value and direction (row, col, value, direction)"""
+    def __init__(self, row, col, value: Any = None, *, direction: Direction=Direction.NORTH):
         self.row: int = row
         self.col: int = col
         self.value = value
@@ -50,6 +54,7 @@ class Coord:
         return type(self)(self.row, self.col, self.value, direction=self.direction)
 
     def move(self, amount: int=1, direction: Optional[Direction] = None):
+        """Move the coordinate by amount in direction.  If direction is None, move in coordinates direction"""
         if direction is None:
             direction = self.direction
         for _ in range(amount):
@@ -78,10 +83,12 @@ class Coord:
             self.direction = Direction.NORTH
 
     def rotate_90_clockwise(self):
+        """changed the direction by rotating 90 degrees clockwise"""
         self.rotate_45_clockwise()
         self.rotate_45_clockwise()
 
     def rotate_90_counter_clockwise(self):
+        """changed the direction by rotating 90 degrees counter clockwise"""
         self.rotate_90_clockwise()
         self.rotate_90_clockwise()
         self.rotate_90_clockwise()

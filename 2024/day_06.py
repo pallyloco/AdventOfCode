@@ -44,12 +44,22 @@ def main():
     # You need to get the guard stuck in a loop by adding a single new obstruction.
     # How many different positions could you choose for this obstruction?
     t1 = time.time()
+
+    # since we know the path of the guard (from part 1 - all spots marked 'X') we only need
+    # to test spots where the guard would get to without modifications
     guarded_spots = [x for x in plan.data if x.value == "X"]
     obstacles = 0
     print("Please wait, this takes time, ~ 1/2 minute")
+
+
     for gs in guarded_spots:
+        # re-read the map (removing the old info)
         guard, plan = read_map(data)
+
+        # add in a "new" obstruction
         plan.set_value(Coord(gs.row, gs.col, "O"))
+
+        # get the result... was it an infinite loop?
         result = patrol(guard, plan)
         if result:
             obstacles += 1
@@ -58,15 +68,21 @@ def main():
     print(obstacles)
 
 
-def patrol(guard, plan):
-    max_row = plan.max_row()
-    max_col = plan.max_col()
+def patrol(guard: Coord, plan: Grid) -> bool:
+    """The guard moves through the grid, adding an 'X' to the grid where ever she has passed
+    :return: True if the guard ends up in an infinite loop
+    """
     positions_and_directions = set()
-    while 0 <= guard.row <= max_row and 0 <= guard.col <= max_col:
+    while plan.is_inside_grid_limits(guard):
+
         if is_obstacle_in_path(guard, plan):
             guard.rotate_90_clockwise()
+
+            # if we have been here before, going in the specific direction, then we have an infinite loop
             if f"({guard.row},{guard.col}) {guard.direction}" in positions_and_directions:
                 return True
+
+            # save position
             positions_and_directions.add(f"({guard.row},{guard.col}) {guard.direction}")
             continue
 
@@ -75,7 +91,7 @@ def patrol(guard, plan):
     return False
 
 
-def is_obstacle_in_path(guard, plan) -> bool:
+def is_obstacle_in_path(guard: Coord, plan) -> bool:
     row = guard.direction.value[0] + guard.row
     col = guard.direction.value[1] + guard.col
     coord = plan.get_data_point(row, col)
@@ -86,9 +102,12 @@ def is_obstacle_in_path(guard, plan) -> bool:
 
 def read_map(lines) -> tuple[Coord, Grid]:
     plan = Grid(lines)
+
+    # find the position of the guard and set that value as an obstacle
     guard = [dp for dp in plan.data if dp.value == "^"][0]
     guard.value = "#"
     plan.set_value(guard)
+
     return guard, plan
 
 

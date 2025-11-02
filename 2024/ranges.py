@@ -1,6 +1,7 @@
 from __future__ import annotations
-from typing import Any, Optional
+from typing import Any, Optional, Iterable
 import itertools as it
+from collections import UserList
 
 
 class Range:
@@ -36,47 +37,21 @@ class Range:
         return str(self)
 
 
-class Ranges:
+class Ranges(UserList):
 
-
-    def __init__(self):
-        self._ranges: list[Range] = []
-        for v in dir(self._ranges):
-            if v[0] != "_":
-                x = getattr(self._ranges, v)
-                setattr(self, v, x)
-
-
-    def find_empty_ranges(self) -> Ranges:
-        self._ranges.sort()
-        empties = Ranges()
-        for one, two in it.pairwise(self._ranges):
+    def find_empty_ranges(self) -> Iterable:
+        self.data.sort()
+        for one, two in it.pairwise(self.data):
             if one.end + 1 < two.start:
-                empties.append(Range(one.end + 1, two.start - one.end - 1))
-        return empties
+                yield Range(one.end + 1, two.start - one.end - 1)
 
     def order_by_size(self, do_reversed=False):
-        self._ranges.sort(key=lambda x: x.size, reverse=do_reversed)
+        self.data.sort(key=lambda x: x.size, reverse=do_reversed)
         return self
 
     def order_by_location(self, do_reversed=False):
-        self._ranges.sort(key=lambda x: x.start, reverse=do_reversed)
+        self.data.sort(key=lambda x: x.start, reverse=do_reversed)
         return self
 
-    def find_with_value(self,value):
-        return [r for r in self._ranges if r.value == value]
-
-    def __len__(self):
-        return len(self._ranges)
-
-    def __iter__(self):
-        return iter(self._ranges)
-
-    def __str__(self):
-        return str(f"{self._ranges})")
-
-    def __repr__(self):
-        return str(self)
-
-if __name__ == "__main__":
-    r = Ranges()
+    def find_with_value(self, value) -> Iterable:
+        return (r for r in self.data if r.value == value)

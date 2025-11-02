@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import Optional, Any, Iterator, Generator
+from typing import Optional, Any, Iterator, Generator, Callable
 from coord import Coord, Direction
-
+import tkinter as tk
+tk_size = 15
 
 class Grid:
     """
@@ -10,7 +11,7 @@ class Grid:
     Only saves data that is relevant
     """
 
-    def __init__(self, data=None, null_char="."):
+    def __init__(self, data=None, null_char=".", convert_value: Callable[[str], Any] = lambda x: x):
         self._data: dict[str, Coord] = dict()
         self._row_max = None
         self._row_min = None
@@ -18,7 +19,7 @@ class Grid:
         self._col_min = None
         self.null_char = null_char
         if data is not None:
-            self.read_data(data)
+            self.read_data(data, convert_value)
 
     @staticmethod
     def create_key(r: int, c: int) -> str:
@@ -46,16 +47,20 @@ class Grid:
     def area(self) -> int:
         return len(self._data.values())
 
-    def read_data(self, data: list[list[str]]):
+    def read_data(self, data: list[list[str]], convert_value: Callable[[str], Any] = lambda x: x):
         """read map from a list of strings"""
         for row, line in enumerate(data):
             for col, char in enumerate(line):
                 if char != self.null_char:
-                    self.set_value(Coord(row, col, char))
+                    self.set_value(Coord(row, col, convert_value(char)))
 
     def get_coordinates_with_value(self,value:Any) -> Generator[Coord, Any, None]:
         """return all coordinate objects that have the specified value"""
         return (coord for coord in self.data if coord.value == value)
+
+    def is_inside_grid_limits(self, coord:Coord) -> bool:
+        """is the coordinate contained within the grid"""
+        return self.min_row() <= coord.row <= self.max_row() and self.min_col() <= coord.col <= self.max_col()
 
     def number_of_sides(self) -> int:
         """number of sides this region has (vertical/horizontal) inside and outside"""
@@ -95,7 +100,7 @@ class Grid:
         else:
             walker.rotate_90_clockwise()
 
-        # Go around the edges
+        # Go around the springs
         while str(walker) not in been_there:
             been_there.add(str(walker))
             edge_cells.add(str(walker))
@@ -130,6 +135,7 @@ class Grid:
         self._col_min = 0
 
     def set_value(self, data_point: Coord):
+        """save the data point in the grid"""
         self._data[Grid.key(data_point)] = data_point
         if self._col_min is None:
             self._col_min = data_point.col
@@ -278,3 +284,45 @@ class Grid:
 
     def __repr__(self):
         return f"({self.min_row()}, {self.min_col()}) ({self.max_row()}, {self.max_col()})"
+
+
+class TkGrid(Grid):
+    def __init__(self, row_min, row_max, col_min, col_max, data=None, null_char=".", convert_value: Callable[[str], Any] = lambda x: x):
+        self.mw = tk.Tk()
+        self.canvas = tk.Canvas(self.mw, height=(row_max-row_min+1)*tk_size, width=(col_max-col_min+1)*tk_size)
+        self.ymin = row_min
+        self.xmin = col_min
+        super().__init__(data, null_char, convert_value)
+        self._canvas_objs: dict[str,int] = {}
+        self.canvas.pack()
+
+
+    def set_value(self, data_point: Coord):
+        super().set_value(data_point)
+        tag = self._canvas_objs.get(Grid.key(data_point), None)
+        if tag is not None:
+            self.canvas.delete(tag)
+        self._canvas_objs [Grid.key(data_point)] = self.canvas.create_text((self.xmin + data_point.col + 1) * tk_size,
+                                                                           (self.ymin+data_point.row+1) * tk_size,
+                                                                           text=data_point.value, anchor='nw')
+        self.mw.update()
+
+    def clear(self):
+        super().set_value()
+        for tag in self._canvas_objs:
+            self.canvas.delete(tag)
+        self._canvas_objs.clear()
+        self.mw.update()
+
+    def remove_data_point(self, r, c):
+        super().remove_data_point(r,c)
+        tag = self._canvas_objs.pop(Grid.create_key(r, c), None)
+        self.canvas.delete(tag)
+        self.mw.update()
+
+
+
+
+
+
+

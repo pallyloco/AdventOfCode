@@ -17,6 +17,7 @@ fh = open("day_02.txt", "r")
 input_data = [(list(map(int, line.split()))) for line in fh]
 
 
+
 def main(data):
     bad = []
     total = 0
