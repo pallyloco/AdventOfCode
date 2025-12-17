@@ -27,24 +27,3 @@ for i in range(0, len(entries)):
                       "Product", entries[i] * entries[j] * entries[k])
                 break
 
-"""
---- Day 1: Report Repair ---
-
-Before you leave, the Elves in accounting just need you to fix your expense report (your puzzle input);
-apparently, something isn't quite adding up.
-
-Specifically, they need you to find the two entries that sum to 2020 and then multiply those two numbers together.
-
-Of course, your expense report is much larger. Find the two entries that sum to 2020;
-what do you get if you multiply them together?
-
-Your puzzle answer was 1003971.
-
---- Part Two ---
-... you can find three numbers in your expense report that meet the same criteria.
-
-In your expense report, what is the product of the three entries that sum to 2020?
-
-Your puzzle answer was 84035952.
-
-"""

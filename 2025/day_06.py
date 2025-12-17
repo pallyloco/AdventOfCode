@@ -74,7 +74,6 @@ def left_right_column(col_data: list[str], col_width):
         yield number
 
 
-
 if __name__ == "__main__":
     print (f"answer 1: {cephalopod_math(1)}")
     print (f"answer 2: {cephalopod_math(2)}")

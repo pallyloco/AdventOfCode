@@ -52,32 +52,40 @@ class Grid:
         return len(self._data.values())
 
     @property
-    def rows(self) -> tuple[int, ...]:
-        return tuple(Grid.row_from_key(key) for key in self._data)
+    def row_range(self) -> range:
+        return range(self.min_row, self.max_row + 1)
+
+    @property
+    def col_range(self) -> range:
+        return range(self.min_col, self.max_col + 1)
+
+    @property
+    def _rows(self) -> set:
+        return set(Grid.row_from_key(key) for key in self._data)
 
     @property
     def min_row(self) -> int:
-        return min(self.rows)
+        return min(self._rows)
 
     @property
     def max_row(self) -> int:
-        return max(self.rows)
+        return max(self._rows)
 
     @property
     def num_rows(self) -> int:
         return self.max_row - self.min_row + 1
 
     @property
-    def cols(self) -> tuple[int, ...]:
-        return tuple(Grid.col_from_key(key) for key in self._data)
+    def _cols(self) -> set:
+        return set(Grid.col_from_key(key) for key in self._data)
 
     @property
     def min_col(self) -> int:
-        return min(self.cols)
+        return min(self._cols)
 
     @property
     def max_col(self) -> int:
-        return max(self.cols)
+        return max(self._cols)
 
     @property
     def num_cols(self) -> int:
@@ -256,18 +264,21 @@ class Grid:
         return sides
 
     # -----------------------------------------------------------------------------------------------------------------
-    # built-ins
+    # iterators
     # -----------------------------------------------------------------------------------------------------------------
-    def generator(self):
-        for row in range(self.min_row, self.max_row+1):
-            for col in range(self.min_col, self.max_col+1):
+    def _generator(self):
+        for row in self.row_range:
+            for col in self.col_range:
                 cell_data = self.get_data_point(row,col)
                 if cell_data is not None:
                     yield cell_data
 
     def __iter__(self):
-        return self.generator()
+        return self._generator()
 
+    # -----------------------------------------------------------------------------------------------------------------
+    # built-ins
+    # -----------------------------------------------------------------------------------------------------------------
     def __str__(self):
         result = ""
         for r in range(self.min_row, self.max_row + 1):

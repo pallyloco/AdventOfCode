@@ -1,30 +1,5 @@
-"""
-It seems like you're not the only one having problems, though; a very long line has formed for the automatic 
-passport scanners, and the delay could upset your travel itinerary.
-
-Due to some questionable network security, you realize you might be able to solve both of these problems at 
-the same time.
-
-The automatic passport scanners are slow because they're having trouble detecting which passports have all 
-required fields. The expected fields are as follows:
-
-byr (Birth Year)
-iyr (Issue Year)
-eyr (Expiration Year)
-hgt (Height)
-hcl (Hair Color)
-ecl (Eye Color)
-pid (Passport ID)
-cid (Country ID)
-
-Passport data is validated in batch files (your puzzle input). Each passport is represented as a sequence of 
-key:value pairs separated by spaces or newlines. Passports are separated by blank lines.
-
-Count the number of valid passports - those that have all required fields. Treat cid as optional. 
-In your batch file, how many passports are valid?
-
-"""
 from typing import Optional
+from reading import read_paragraphs
 
 # 212 is too low
 delme = 0
@@ -32,24 +7,12 @@ delme = 0
 REQUIRED_KEYS = sorted(["byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"])
 
 
-def main(part: int = 1):
+def main():
     file = open('day4_input.txt', 'r')
-    required_keys_passports = 0
-    passport_lines: list[str] = list()
-    passports: list[dict[str,str]] = list()
+    passports: list[dict[str,str]] = []
 
-    for line in map(str.rstrip, file):
-
-        # passports are separated by lines
-        if not line:
-            passports.append(convert_to_passport(passport_lines))
-            passport_lines.clear()
-            continue
-
-        passport_lines.append(line)
-
-    # last passport
-    passports.append(convert_to_passport(passport_lines))
+    for passport_lines in read_paragraphs(map(str.rstrip, file)):
+        passports.append(convert_to_passport(passport_lines))
 
     # part 1, number of passports with all the appropriate keys
     num_with_keys = sum((1 for passport in passports if passport is not None))
@@ -76,18 +39,6 @@ def convert_to_passport(lines: list[str]) -> Optional[dict[str, str]]:
 
 
 def valid_passport(passport: dict[str, str]) -> bool:
-    """
-    You can continue to ignore the cid field, but each other field has strict rules about
-    what values are valid for automatic validation:
-
-    cid (Country ID) - ignored, missing or not.
-
-    Your job is to count the passports where all required fields are both present and valid
-    according to the above rules.
-    """
-
-    # going to try this without regex :)
-
     try:
         """byr (Birth Year) - four digits; at least 1920 and at most 2002."""
         if not between(int(passport["byr"]), 1920, 2020): return False
@@ -130,4 +81,4 @@ def between(value: int, min_value: int, max_value: int) -> bool:
 
 
 if __name__ == '__main__':
-    main(1)
+    main()

@@ -1,30 +1,10 @@
-"""
-All you need to do is identify the questions for which anyone in your group answers "yes".
-
-For each group, count the number of questions to which anyone answered "yes".
-
-Another group asks for your help, then another, and eventually you've collected answers
-from every group on the plane (your puzzle input).
-
-Each group's answers are separated by a blank line, and within each group,
-each person's answers are on a single line.
-
-What is the sum of those counts?
-
-For each group, count the number of questions to which everyone answered "yes".
-What is the sum of those counts?
-
-
-"""
-from typing import TextIO
-
-
-def main(part: int = 1):
+from reading import read_paragraphs
+def main():
     total_answered = 0
     file = open('day6_input.txt', 'r')
     total_everyone = 0
 
-    for lines in read_paragraph(file):
+    for lines in read_paragraphs(map(str.strip,file)):
         answers: set[str] = set()
         everyone: set[str] = set()
 
@@ -40,17 +20,6 @@ def main(part: int = 1):
 
     print("Total number of answers is:", total_answered)
     print("Total number of everyone is:", total_everyone)
-
-
-def read_paragraph(file: TextIO) -> list[str]:
-    lines: list[str] = list()
-    for line in map(str.rstrip, file):
-        if line:
-            lines.append(line)
-        if not line and len(lines) > 0:
-            yield lines
-            lines.clear()
-    yield lines
 
 
 if __name__ == '__main__':

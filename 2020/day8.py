@@ -1,95 +1,61 @@
-"""
-You narrow the problem down to a strange infinite loop in the boot code (your puzzle input)
-of the device. You should be able to fix it, but first you need to be able to run the code
-in isolation.
 
-The boot code is represented as a text file with one instruction per line of text.
-Each instruction consists of an operation (acc, jmp, or nop) and
-an argument (a signed number like +4 or -20).
-
-acc increases or decreases a single global value called the accumulator by the value given in
-    the argument. For example, acc +7 would increase the accumulator by 7.
-    The accumulator starts at 0. After an acc instruction, the instruction immediately below it
-    is executed next.
-
-jmp jumps to a new instruction relative to itself.
-    The next instruction to execute is found using the argument as an offset from the jmp instruction;
-    for example, jmp +2 would skip the next instruction,
-    jmp +1 would continue to the instruction immediately below it,
-    and jmp -20 would cause the instruction 20 lines above to be executed next.
-
-nop stands for No OPeration - it does nothing. The instruction immediately below it is executed next.
-"""
-
-accumulator = 0
-
-
-def main(part: int = 1):
-    global accumulator
+def main():
 
     file = open('day8_input.txt', 'r')
-    program: list[str] = [str.rstrip(l) for l in file]
-    code_coverage: list[int] = [0 for i in range(len(program))]
+    data = [str.rstrip(l) for l in file]
+    program: Program = Program( data)
+    program.run()
+    print("Part 1: ", program.accumulator)
 
-    # start the program at the beginning
-    program_counter = 0
-    while program_counter < len(program) and code_coverage[program_counter] == 0:
-        program_counter = execute(program, program_counter, code_coverage)
+    # find a program that does not have an infinite loop by changing only ONE command
+    # NOP->jmp or jmp->NOP
+    modifiable_addresses = [i for i,op in enumerate(program.code) if op.startswith("jmp") or op.startswith("nop")]
+    for address in modifiable_addresses:
+        modified_code = [c for c in data]
+        opcode, value = modified_code[address].split(" ")
+        if opcode == 'nop':
+            modified_code[address] = f"jmp {value}"
+        elif opcode == 'jmp':
+            modified_code[address] = f"nop {value}"
+        program: Program = Program( modified_code)
+        program.run()
+        if not program.is_infinite:
+            print("Part 2: ", program.accumulator)
+            break
 
-    print("Before infinite loop starts, accumulator is", accumulator)
+class Program:
+    def __init__(self, code):
+        self.accumulator: int = 0
+        self.program_counter:int = 0
+        self.code = code
+        self.number_instructions = len(code)
+        self.code_coverage: list[int] = [0] * self.number_instructions
 
-    """
-    Fix the program so that it terminates normally by changing 
-        exactly one jmp (to nop) 
-        or nop (to jmp). 
-    What is the value of the accumulator after the program terminates?
-    """
+    @property
+    def is_infinite(self):
+        return self.program_counter < self.number_instructions
 
-    modified_address = -1
-    while True:
-        if modified_address >= 0:
-            _ = switch_opcodes(program, modified_address)
+    def run(self):
+        self.accumulator = 0
+        self.program_counter = 0
+        self.code_coverage: list[int] = [0] * self.number_instructions
+        while self.program_counter < self.number_instructions and self.code_coverage[self.program_counter] == 0:
+             self.execute_instruction()
+        return
 
-        for i in range(modified_address+1, len(program)):
-            if switch_opcodes(program, i):
-                modified_address = i
-                break
+    def execute_instruction(self):
+        self.code_coverage[self.program_counter] = 1
+        opcode, value = self.code[self.program_counter].split(" ")
+        if opcode == 'acc':
+            self.accumulator += int(value)
+            self.program_counter += 1
+        elif opcode == 'nop':
+            self.program_counter += 1
+        elif opcode == 'jmp':
+            self.program_counter += int(value)
+        return
 
-        code_coverage: list[int] = [0 for i in range(len(program))]
-        accumulator = 0
-        program_counter = 0
-        while program_counter < len(program) and code_coverage[program_counter] == 0:
-            program_counter = execute(program, program_counter, code_coverage)
-        if program_counter == len(program):
-            print("After fixing infinite loop, accumulator is", accumulator)
-            exit()
-
-
-def switch_opcodes(program: list[str], index: int) -> bool:
-    opcode, value = program[index].split(" ")
-    if opcode == 'nop':
-        program[index] = f"jmp {value}"
-        return True
-    elif opcode == 'jmp':
-        program[index] = f"nop {value}"
-        return True
-    return False
-
-
-def execute(program: list[str], program_counter: int, code_coverage: list[int]) -> int:
-    global accumulator
-    code_coverage[program_counter] = 1
-    opcode, value = program[program_counter].split(" ")
-    if opcode == 'acc':
-        accumulator += int(value)
-        program_counter += 1
-    elif opcode == 'nop':
-        program_counter += 1
-    elif opcode == 'jmp':
-        program_counter += int(value)
-    #print(opcode, value, "->", program_counter, accumulator)
-    return program_counter
 
 
 if __name__ == '__main__':
-    main(1)
+    main()
